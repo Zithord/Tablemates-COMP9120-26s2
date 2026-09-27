@@ -2,7 +2,7 @@
 
 Tablemates 是一个课程项目演示站：用户可以寻找餐厅、记录到访并对**整家餐厅**评分，查看好友的分享、收藏店铺、互相推荐，以及发起聚餐计划和投票。前端及模拟内容使用英文；本说明使用中文。项目由 Flask 前端与 JSON API、PostgreSQL 数据库、Docker Compose 和可重复生成的模拟数据组成。
 
-概念设计原稿见 [小组 ER 图](../v1/9120%20Gp.drawio%20(2).pdf)；**当前实现**以 [`sql/init/01_schema.sql`](sql/init/01_schema.sql) 为准，下文另有对应的 Mermaid ER 图。本项目与相邻的 `campus-booking-system` 无关。
+概念设计原稿见 小组 ER 图；**当前实现**以 [`sql/init/01_schema.sql`](sql/init/01_schema.sql) 为准，下文另有对应的 Mermaid ER 图。本项目与相邻的 `campus-booking-system` 无关。
 
 ## 1. 环境与端口
 
