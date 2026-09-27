@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#153c35">
+  <title>Tablemates · Good food is better together</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+  <div id="auth-screen" class="auth-screen" hidden>
+    <section class="auth-story" aria-label="About Tablemates">
+      <a class="auth-brand" href="/" aria-label="Tablemates home"><span class="brand-mark">t<span>.</span></span><span>tablemates</span></a>
+      <div class="auth-story-body">
+        <span class="eyebrow light">A better way to share a table</span>
+        <h1>Good food is<br>better <em>together.</em></h1>
+        <p>Discover local places, see what your friends loved, and turn “we should catch up” into a real dinner plan.</p>
+        <div class="auth-preview" aria-hidden="true">
+          <div class="preview-icon">✦</div>
+          <div><strong>Good company, great finds</strong><span>Where your next favourite place begins</span></div>
+          <div class="preview-avatars"><i>A</i><i>B</i><i>C</i></div>
+        </div>
+      </div>
+      <div class="auth-story-bottom">SYDNEY, AUSTRALIA <span>•</span> A FRIENDS' RESTAURANT JOURNAL</div>
+      <div class="auth-orbit orbit-one"></div><div class="auth-orbit orbit-two"></div>
+    </section>
+    <section class="auth-panel">
+      <div class="auth-panel-inner">
+        <span class="eyebrow">WELCOME BACK</span>
+        <h2>Pull up a chair.</h2>
+        <p class="muted">Sign in to explore places, friends and plans.</p>
+        <form id="login-form" class="form-stack">
+          <label for="login-email">Email address</label>
+          <input id="login-email" name="email" type="email" autocomplete="username" placeholder="you@example.com" required>
+          <label for="login-password">Password</label>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Your password" required>
+          <button class="button button-primary button-wide" type="submit">Sign in <span aria-hidden="true">→</span></button>
+        </form>
+        <div class="demo-access">
+          <div class="demo-icon">✦</div>
+          <div><strong>Just looking around?</strong><p>Use Alice's ready-made demo account.</p></div>
+          <button class="text-button" type="button" data-action="demo-login">Enter demo</button>
+        </div>
+        <p class="auth-footer">This is a fictional university project prototype.</p>
+      </div>
+    </section>
+  </div>
+
+  <div id="app-shell" class="app-shell" hidden>
+    <aside id="sidebar" class="sidebar" aria-label="Main navigation">
+      <a class="brand" href="/" data-page="home"><span class="brand-mark">t<span>.</span></span><span>tablemates</span></a>
+      <div class="sidebar-caption">YOUR SPACE</div>
+      <nav class="nav-list">
+        <button type="button" class="nav-item" data-page="home"><span class="nav-glyph">H</span>Home</button>
+        <button type="button" class="nav-item" data-page="explore"><span class="nav-glyph">E</span>Explore places</button>
+        <button type="button" class="nav-item" data-page="friends"><span class="nav-glyph">F</span>Friends<span class="nav-count" id="nav-friend-count" hidden></span></button>
+        <button type="button" class="nav-item" data-page="feed"><span class="nav-glyph">A</span>Activity</button>
+        <button type="button" class="nav-item" data-page="plans"><span class="nav-glyph">P</span>Dining plans</button>
+        <button type="button" class="nav-item" data-page="saved"><span class="nav-glyph">S</span>Saved places</button>
+        <button type="button" class="nav-item" data-page="inbox"><span class="nav-glyph">I</span>Inbox<span class="nav-dot" id="nav-inbox-dot" hidden></span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-note"><span class="note-sparkle">✦</span><strong>Make plans happen.</strong><p>Find a place your whole group will love.</p><button type="button" data-page="plans">Plan a meal <span>↗</span></button></div>
+        <button type="button" class="account-button" data-page="profile"><span id="sidebar-avatar" class="avatar avatar-small">A</span><span><strong id="sidebar-name">Your account</strong><small>View profile</small></span><span class="account-arrow">↗</span></button>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <button id="mobile-menu-button" class="mobile-menu-button" type="button" data-action="toggle-menu" aria-label="Toggle navigation">☰</button>
+        <div class="topbar-label"><span id="topbar-section">YOUR SPACE</span><strong id="topbar-title">Home</strong></div>
+        <div class="topbar-actions"><span class="topbar-local">✦&nbsp; Sydney food, shared</span><button type="button" class="button button-dark" data-action="new-review">+ Write a review</button></div>
+      </header>
+      <main id="main-content" class="main-content" tabindex="-1"><div class="loading-state">Setting the table…</div></main>
+    </div>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast-root" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>
