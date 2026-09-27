@@ -1,0 +1,146 @@
+erDiagram
+    %% Source: sql/init/01_schema.sql (16 base tables).
+    %% Views and CHECK/trigger rules are documented in README.md.
+
+    app_user {
+        bigint user_id PK
+        text user_name
+        text user_email UK
+        text password_hash
+        timestamptz created_at
+    }
+    suburb {
+        bigint suburb_id PK
+        text name
+        text state
+        char postcode
+    }
+    cuisine {
+        bigint cuisine_id PK
+        text cuisine_name UK
+    }
+    restaurant {
+        bigint restaurant_id PK
+        text restaurant_name
+        text street_address
+        bigint suburb_id FK
+        smallint price_level
+        boolean is_active
+    }
+    restaurant_cuisine {
+        bigint restaurant_id PK, FK
+        bigint cuisine_id PK, FK
+    }
+    dish {
+        bigint dish_id PK
+        bigint restaurant_id FK
+        text dish_name
+        text description
+        numeric price_aud
+        boolean is_available
+    }
+    friendship {
+        bigint friendship_id PK
+        bigint requester_id FK
+        bigint addressee_id FK
+        text status
+        timestamptz requested_at
+        timestamptz accepted_at
+    }
+    favorite {
+        bigint user_id PK, FK
+        bigint restaurant_id PK, FK
+        timestamptz added_at
+    }
+    dining_plan {
+        bigint plan_id PK
+        bigint creator_id FK
+        text title
+        timestamptz plan_date
+        timestamptz voting_deadline
+        text status
+        bigint chosen_restaurant_id FK
+        timestamptz created_at
+    }
+    plan_participant {
+        bigint plan_id PK, FK
+        bigint user_id PK, FK
+        text rsvp_status
+        timestamptz invited_at
+        timestamptz responded_at
+    }
+    plan_candidate {
+        bigint plan_id PK, FK
+        bigint restaurant_id PK, FK
+        timestamptz added_at
+    }
+    plan_vote {
+        bigint plan_id PK, FK
+        bigint user_id PK, FK
+        bigint restaurant_id FK
+        timestamptz voted_at
+    }
+    visit {
+        bigint visit_id PK
+        bigint user_id FK
+        bigint restaurant_id FK
+        bigint plan_id FK
+        date visit_date
+        integer party_size
+        text visibility
+    }
+    review {
+        bigint review_id PK
+        bigint visit_id FK, UK
+        smallint rating
+        text review_text
+        timestamptz created_at
+    }
+    review_comment {
+        bigint comment_id PK
+        bigint review_id FK
+        bigint author_id FK
+        bigint parent_comment_id FK
+        text comment_text
+        timestamptz created_at
+    }
+    recommendation {
+        bigint recommendation_id PK
+        bigint sender_id FK
+        bigint receiver_id FK
+        bigint restaurant_id FK
+        text message
+        text status
+        timestamptz created_at
+    }
+
+    suburb ||--o{ restaurant : contains
+    restaurant ||--o{ restaurant_cuisine : has
+    cuisine ||--o{ restaurant_cuisine : describes
+    restaurant ||--o{ dish : offers
+
+    app_user ||--o{ friendship : requests
+    app_user ||--o{ friendship : receives
+    app_user ||--o{ favorite : saves
+    restaurant ||--o{ favorite : saved_by
+
+    app_user ||--o{ dining_plan : creates
+    dining_plan ||--o{ plan_participant : includes
+    app_user ||--o{ plan_participant : joins
+    dining_plan ||--o{ plan_candidate : considers
+    restaurant ||--o{ plan_candidate : proposed_for
+    plan_participant ||--o| plan_vote : casts
+    plan_candidate ||--o{ plan_vote : receives
+    plan_candidate o|--o| dining_plan : chosen_for
+
+    app_user ||--o{ visit : makes
+    restaurant ||--o{ visit : receives
+    dining_plan o|--o{ visit : originates
+    visit ||--o| review : may_have
+    review ||--o{ review_comment : has
+    app_user ||--o{ review_comment : writes
+    review_comment o|--o{ review_comment : replies_to
+
+    app_user ||--o{ recommendation : sends
+    app_user ||--o{ recommendation : receives
+    restaurant ||--o{ recommendation : suggested
