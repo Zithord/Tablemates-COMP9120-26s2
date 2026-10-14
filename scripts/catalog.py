@@ -1,4 +1,4 @@
-"""Fictional, English-language people, venues and menu copy for the demo."""
+"""Fictional English people and restaurants; food names are prose only."""
 
 FIRST_NAMES = (
     "Amelia", "Oliver", "Mia", "Jack", "Sophie", "Noah", "Isla", "Leo",
@@ -19,7 +19,7 @@ LAST_NAMES = (
     "Patel", "Reed", "Shah", "Tran", "Wilson", "Yamamoto", "Zhao",
 )
 
-# Existing rows in 04_seed.sql are suburbs 1-3 and cuisines 1-4.
+# The generator prepends three suburbs and four cuisines to these collections.
 NEW_SUBURBS = (
     ("Parramatta", "NSW", "2150", "Church Street"),
     ("Chatswood", "NSW", "2067", "Victoria Avenue"),
@@ -90,117 +90,18 @@ NEW_RESTAURANTS = (
     ("Saltwater Kitchen", 12, 2, 4),
 )
 
-# Each item: name, menu description, base AUD price, kind.
-MENUS = {
-    1: (
-        ("Dan dan noodles", "Wheat noodles with chilli oil, sesame and minced pork.", 19.5, "main"),
-        ("Pork and chive dumplings", "Hand-folded dumplings with black vinegar.", 16.0, "main"),
-        ("Mapo tofu", "Silken tofu with fermented chilli and Sichuan pepper.", 21.0, "main"),
-        ("Scallion pancakes", "Crisp layered pancakes with ginger dipping sauce.", 12.0, "main"),
-        ("Garlic eggplant", "Tender eggplant in a sweet garlic sauce.", 18.0, "main"),
-        ("Smashed cucumber salad", "Cucumber tossed with garlic, vinegar and sesame.", 10.5, "main"),
-    ),
-    2: (
-        ("Miso ramen", "Miso broth with noodles, soft egg and spring onion.", 23.0, "main"),
-        ("Salmon donburi", "Seared salmon over rice with pickles and sesame.", 25.0, "main"),
-        ("Chicken karaage", "Crisp marinated chicken with lemon and mayo.", 17.0, "main"),
-        ("Tempura soba", "Buckwheat noodles with seasonal vegetable tempura.", 22.0, "main"),
-        ("Agedashi tofu", "Lightly fried tofu in a warm dashi broth.", 15.0, "main"),
-        ("Matcha cheesecake", "Light baked cheesecake with matcha cream.", 13.0, "dessert"),
-    ),
-    3: (
-        ("Flat white", "Double espresso with silky steamed milk.", 5.5, "drink"),
-        ("Smashed avocado toast", "Avocado, feta and herbs on toasted sourdough.", 18.0, "main"),
-        ("Ricotta hotcakes", "Fluffy hotcakes with berries and maple syrup.", 20.0, "dessert"),
-        ("Iced latte", "Espresso and chilled milk over ice.", 6.5, "drink"),
-        ("Banana bread", "House-baked banana loaf served warm with butter.", 8.0, "dessert"),
-        ("Mushroom toastie", "Roasted mushrooms and cheese on sourdough.", 17.0, "main"),
-    ),
-    4: (
-        ("Pappardelle beef ragu", "Slow-braised beef ragu with wide egg pasta.", 28.0, "main"),
-        ("Margherita pizza", "Tomato, mozzarella and basil on a thin crust.", 23.0, "main"),
-        ("Burrata with tomatoes", "Creamy burrata with heirloom tomatoes and basil.", 19.0, "main"),
-        ("Potato gnocchi", "Pillowy gnocchi with browned butter and sage.", 26.0, "main"),
-        ("Tiramisu", "Coffee-soaked sponge layered with mascarpone.", 14.0, "dessert"),
-        ("Arancini", "Crisp rice balls filled with mozzarella and herbs.", 16.0, "main"),
-    ),
-    5: (
-        ("Beef bibimbap", "Rice bowl with vegetables, beef, egg and gochujang.", 22.0, "main"),
-        ("Kimchi pancake", "Crisp kimchi pancake with soy dipping sauce.", 16.0, "main"),
-        ("Bulgogi beef", "Soy-marinated beef with rice and lettuce.", 27.0, "main"),
-        ("Soft tofu stew", "Spicy tofu broth with mushrooms and egg.", 21.0, "main"),
-        ("Korean fried chicken", "Crisp chicken glazed with sweet chilli sauce.", 24.0, "main"),
-        ("Mango bingsu", "Shaved ice with mango and condensed milk.", 15.0, "dessert"),
-    ),
-    6: (
-        ("Pad see ew", "Wide rice noodles with egg, greens and soy sauce.", 21.0, "main"),
-        ("Green curry chicken", "Coconut curry with chicken, herbs and jasmine rice.", 24.0, "main"),
-        ("Tom yum soup", "Hot and sour soup with prawns and mushrooms.", 19.0, "main"),
-        ("Thai basil chicken", "Minced chicken with basil, chilli and fried egg.", 22.0, "main"),
-        ("Chicken satay", "Grilled skewers with peanut sauce and cucumber.", 16.0, "main"),
-        ("Mango sticky rice", "Coconut sticky rice with fresh mango.", 14.0, "dessert"),
-    ),
-    7: (
-        ("Beef pho", "Rice noodles in aromatic beef broth with herbs.", 20.0, "main"),
-        ("Crispy pork banh mi", "Baguette with pork, pickles, coriander and chilli.", 14.0, "main"),
-        ("Rice paper rolls", "Fresh rolls with prawns, herbs and peanut sauce.", 15.0, "main"),
-        ("Lemongrass chicken rice", "Grilled chicken with rice and pickled vegetables.", 21.0, "main"),
-        ("Bun cha", "Grilled pork with rice noodles, herbs and dipping broth.", 22.0, "main"),
-        ("Vietnamese iced coffee", "Strong coffee with condensed milk over ice.", 7.0, "drink"),
-    ),
-    8: (
-        ("Butter chicken", "Tandoor chicken in a tomato and cream sauce.", 25.0, "main"),
-        ("Palak paneer", "Paneer in a spinach gravy with warming spices.", 23.0, "main"),
-        ("Lamb rogan josh", "Slow-cooked lamb in a rich Kashmiri-style sauce.", 28.0, "main"),
-        ("Garlic naan", "Tandoor-baked flatbread brushed with garlic butter.", 6.0, "main"),
-        ("Masala dosa", "Crisp rice crepe filled with spiced potato.", 19.0, "main"),
-        ("Mango lassi", "Yoghurt drink blended with ripe mango.", 7.0, "drink"),
-    ),
-    9: (
-        ("Falafel plate", "Herb falafel with hummus, salad and flatbread.", 22.0, "main"),
-        ("Chicken shawarma", "Spiced chicken with garlic sauce and pickles.", 24.0, "main"),
-        ("Hummus and pita", "Creamy chickpea dip with warm pita bread.", 14.0, "main"),
-        ("Fattoush salad", "Tomato, cucumber and herbs with crisp pita.", 16.0, "main"),
-        ("Lamb kofta", "Chargrilled lamb skewers with tahini and rice.", 27.0, "main"),
-        ("Pistachio baklava", "Layered pastry with pistachio and honey syrup.", 13.0, "dessert"),
-    ),
-    10: (
-        ("Fish tacos", "Grilled fish with cabbage slaw and lime crema.", 21.0, "main"),
-        ("Birria tacos", "Slow-braised beef tacos with rich dipping broth.", 24.0, "main"),
-        ("Chicken quesadilla", "Toasted tortilla with chicken and melted cheese.", 20.0, "main"),
-        ("Street corn", "Grilled corn with lime, cheese and chilli.", 12.0, "main"),
-        ("Guacamole and chips", "Fresh avocado dip with crisp corn chips.", 15.0, "main"),
-        ("Cinnamon churros", "Warm churros with chocolate dipping sauce.", 13.0, "dessert"),
-    ),
-    11: (
-        ("Pan-seared barramundi", "Barramundi with lemon butter and seasonal greens.", 34.0, "main"),
-        ("Roasted pumpkin salad", "Pumpkin, grains, greens and whipped feta.", 23.0, "main"),
-        ("Steak frites", "Grilled steak with shoestring fries and herb butter.", 39.0, "main"),
-        ("Wild mushroom risotto", "Creamy arborio rice with mushrooms and parmesan.", 29.0, "main"),
-        ("Slow-roasted lamb shoulder", "Tender lamb with potatoes and pan juices.", 38.0, "main"),
-        ("Passionfruit pavlova", "Crisp meringue with cream and passionfruit.", 16.0, "dessert"),
-    ),
-    12: (
-        ("Grilled octopus", "Chargrilled octopus with lemon and parsley.", 29.0, "main"),
-        ("Fish and chips", "Beer-battered fish with chips and tartare sauce.", 27.0, "main"),
-        ("Prawn linguine", "Linguine with prawns, garlic and cherry tomatoes.", 32.0, "main"),
-        ("Natural oysters", "Fresh oysters served with lemon and shallot vinegar.", 25.0, "main"),
-        ("Seafood chowder", "Creamy chowder with fish, prawns and sourdough.", 28.0, "main"),
-        ("Crispy skin snapper", "Pan-fried snapper with fennel and citrus.", 36.0, "main"),
-    ),
-}
-
-BASE_MENU = {
-    1: (("Dan dan noodles", "main"), ("Pork and chive dumplings", "main"),
-        ("Smashed cucumber salad", "main"), ("Scallion pancakes", "main"),
-        ("Mapo tofu", "main")),
-    2: (("Miso ramen", "main"), ("Salmon donburi", "main"),
-        ("Chicken karaage", "main"), ("Tempura soba", "main"),
-        ("Matcha cheesecake", "dessert")),
-    3: (("Flat white", "drink"), ("Smashed avocado toast", "main"),
-        ("Ricotta hotcakes", "dessert"), ("Iced latte", "drink"),
-        ("Banana bread", "dessert")),
-    4: (("Pappardelle beef ragu", "main"), ("Margherita pizza", "main"),
-        ("Burrata with tomatoes", "main"), ("Potato gnocchi", "main"),
-        ("Tiramisu", "dessert")),
+# These are natural-language ingredients for whole-restaurant reviews, not menu records.
+FOOD_MENTIONS = {
+    1: ("dan dan noodles", "pork dumplings", "mapo tofu"),
+    2: ("miso ramen", "salmon donburi", "chicken karaage"),
+    3: ("flat white", "avocado toast", "ricotta hotcakes"),
+    4: ("beef ragu", "margherita pizza", "potato gnocchi"),
+    5: ("bibimbap", "Korean fried chicken", "beef bulgogi"),
+    6: ("pad thai", "green curry", "tom yum soup"),
+    7: ("beef pho", "banh mi", "rice paper rolls"),
+    8: ("butter chicken", "dal", "vegetable biryani"),
+    9: ("falafel", "lamb shawarma", "hummus"),
+    10: ("fish tacos", "quesadillas", "nachos"),
+    11: ("roast chicken", "pumpkin salad", "grilled barramundi"),
+    12: ("fish and chips", "prawn linguine", "grilled octopus"),
 }

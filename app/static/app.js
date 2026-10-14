@@ -1,196 +1,277 @@
-const state = {user:null,page:'home',favorites:new Set(),catalog:null,filters:{q:'',suburb:'',cuisine:'',sort:'rating',friends_only:'0'},friendQuery:'',reviewScopes:{},sequence:0};
-const $ = (selector) => document.querySelector(selector);
-const html = (value) => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
-const firstName = (name) => String(name || 'Friend').split(' ')[0];
-const initials = (name) => String(name || '?').split(' ').slice(0,2).map(part=>part[0]).join('').toUpperCase();
-const dateText = (value) => value ? new Date(value).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}) : 'Date to be confirmed';
-const visitDate = (value) => value ? String(value).slice(0,10).split('-').reverse().join('/') : '—';
-const ratingText = (value) => value == null ? 'New' : Number(value).toFixed(1);
-const priceText = (value) => value ? '$'.repeat(Number(value)) : '$$';
-const localDate = () => {const now=new Date();return new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);};
-const params = (object) => new URLSearchParams(Object.entries(object).filter(([,value])=>value !== '' && value != null));
+const state = {
+  user: null, page: 'explore', catalog: null, favorites: new Set(), sequence: 0,
+  filters: {q: '', suburb: '', cuisine: '', price_level: '', min_rating: '', sort: 'rating', friends_only: '0'},
+  friendQuery: '', offsets: {explore: 0, records: 0}, detail: null
+};
+const PAGE_SIZE = 20;
+const $ = selector => document.querySelector(selector);
+const html = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const dateText = value => value ? new Date(value).toLocaleDateString('en-AU') : '—';
+const ratingText = value => value == null ? 'New' : Number(value).toFixed(1);
+const params = values => new URLSearchParams(Object.entries(values).filter(([, value]) => value !== '' && value != null));
+const localDate = () => {const now = new Date(); return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);};
+const avatar = name => `<span class="avatar">${html(String(name).split(' ').slice(0, 2).map(part => part[0]).join(''))}</span>`;
+const button = (label, action, id, extra = '', style = 'button-outline') => `<button type="button" class="button button-small ${style}" data-action="${action}" data-id="${id}" ${extra}>${label}</button>`;
+const heading = (title, description) => `<div class="page-heading"><span class="eyebrow">TABLEMATES</span><h1>${title}</h1><p>${description}</p></div>`;
+const section = title => `<div class="section-head"><h2>${title}</h2></div>`;
+const empty = (title, text) => `<div class="empty-state"><h3>${title}</h3><p>${text}</p></div>`;
 
-async function api(path, options={}) {
-  const request = {method:options.method || 'GET',credentials:'same-origin',headers:{Accept:'application/json'}};
-  if (options.data !== undefined) {request.headers['Content-Type']='application/json';request.body=JSON.stringify(options.data);}
-  const response = await fetch(path,request);
-  if (response.status === 204) return {};
-  let result;
-  try {result=await response.json();} catch {throw new Error(`Server returned ${response.status}.`);}
-  if (!response.ok) throw new Error(result.error || `Request failed (${response.status}).`);
-  return result;
+async function api(path, options = {}) {
+  const request = {method: options.method || 'GET', credentials: 'same-origin', headers: {Accept: 'application/json'}};
+  if (options.data !== undefined) {
+    request.headers['Content-Type'] = 'application/json';
+    request.body = JSON.stringify(options.data);
+  }
+  const result = await fetch(path, request);
+  if (result.status === 204) return {};
+  let data;
+  try {data = await result.json();} catch {throw new Error(`Server returned ${result.status}.`);}
+  if (!result.ok) {
+    const error = new Error(data.error || 'Request failed.');
+    error.status = result.status;
+    throw error;
+  }
+  return data;
 }
-function toast(message,isError=false) {
-  const item=document.createElement('div');item.className=`toast${isError?' error':''}`;item.textContent=message;$('#toast-root').append(item);setTimeout(()=>item.remove(),4400);
+
+function toast(message, error = false) {
+  const item = document.createElement('div');
+  item.className = `toast${error ? ' error' : ''}`;
+  item.textContent = message;
+  $('#toast-root').append(item);
+  setTimeout(() => item.remove(), 4500);
 }
-function errorNotice(error) {toast(error.message || 'Something went wrong.',true);}
-function empty(title,description,action='') {return `<div class="empty-state"><span class="empty-symbol">✦</span><h3>${html(title)}</h3><p>${html(description)}</p>${action}</div>`;}
-function heading(kicker,title,description,action='') {return `<div class="page-heading"><div><span class="eyebrow">${html(kicker)}</span><h1>${html(title)}</h1><p>${html(description)}</p></div>${action}</div>`;}
-function section(title,description='',action='') {return `<div class="section-head"><div><h2>${html(title)}</h2>${description?`<p>${html(description)}</p>`:''}</div>${action}</div>`;}
-function avatar(name,variant='') {return `<span class="avatar ${variant}">${html(initials(name))}</span>`;}
-function status(value) {return `<span class="status-pill ${html(value)}">${html(String(value || '').replaceAll('_',' '))}</span>`;}
-function art(restaurant) {
-  const cuisine=String(restaurant.cuisines?.[0] || restaurant.restaurant_name || '').toLowerCase();
-  if (/pizza|italian|pasta/.test(cuisine)) return ['🍝','pink'];
-  if (/japanese|sushi|ramen/.test(cuisine)) return ['🍜','orange'];
-  if (/thai|vietnam|korean|chinese|asian/.test(cuisine)) return ['🥢','purple'];
-  if (/cafe|brunch|coffee|bakery/.test(cuisine)) return ['☕','orange'];
-  if (/seafood/.test(cuisine)) return ['🦐','pink'];
-  if (/burger|american/.test(cuisine)) return ['🍔','orange'];
-  return ['🍽️','green'];
+function modal(title, content, wide = false) {
+  $('#modal-root').innerHTML = `<div class="modal-backdrop" data-action="close-backdrop"><div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label="${html(title)}"><div class="modal-header"><h2>${html(title)}</h2><button type="button" class="icon-button" data-action="close-modal" aria-label="Close">×</button></div>${content}</div></div>`;
+  document.body.style.overflow = 'hidden';
+  $('.modal-header button')?.focus();
 }
-function friendVisitLabel(restaurant) {
-  const count=Number(restaurant.friend_visit_count || 0);
-  if (!count) return '';
-  const names=(restaurant.friend_names || []).map(html).join(', ');
-  const more=count-(restaurant.friend_names || []).length;
-  return `<div class="friend-visit-note"><span class="friend-note-icon">✦</span><span><strong>${count} friend${count===1?'':'s'} visited recently</strong><small>${names}${more>0?` +${more} more`:''}</small></span></div>`;
+function closeModal() {
+  $('#modal-root').innerHTML = '';
+  document.body.style.overflow = '';
+}
+function showAuth() {
+  closeModal();
+  $('#auth-screen').hidden = false;
+  $('#app-shell').hidden = true;
+}
+function authMode(mode) {
+  $('#login-form').hidden = mode !== 'login';
+  $('#register-form').hidden = mode !== 'register';
+  $('#auth-title').textContent = mode === 'register' ? 'Join the table.' : 'Pull up a chair.';
+  document.querySelectorAll('[data-action="auth-mode"]').forEach(item => item.classList.toggle('active', item.dataset.mode === mode));
+}
+async function enterApp(user) {
+  state.user = user;
+  state.catalog = await api('/api/catalog');
+  const saved = await api('/api/favorites');
+  state.favorites = new Set(saved.items.map(item => Number(item.restaurant_id)));
+  state.offsets = {explore: 0, records: 0};
+  state.filters.friends_only = '0';
+  $('#auth-screen').hidden = true;
+  $('#app-shell').hidden = false;
+  $('#sidebar-name').textContent = user.user_name;
+  $('#sidebar-email').textContent = user.user_email;
+  await navigate('explore');
+}
+async function navigate(page) {
+  const names = {explore: 'Explore restaurants', friends: 'Friends', saved: 'Saved places', records: 'My visits & reviews'};
+  if (!names[page]) return;
+  state.page = page;
+  const sequence = ++state.sequence;
+  $('#topbar-title').textContent = names[page];
+  $('#sidebar').classList.remove('open');
+  document.querySelectorAll('[data-page]').forEach(item => item.classList.toggle('active', item.dataset.page === page));
+  $('#main-content').innerHTML = '<div class="loading-state">Loading…</div>';
+  try {
+    const content = await ({explore: explorePage, friends: friendsPage, saved: savedPage, records: recordsPage}[page])();
+    if (sequence === state.sequence) $('#main-content').innerHTML = content;
+  } catch (error) {
+    if (error.status === 401) {state.user = null; showAuth();}
+    else if (sequence === state.sequence) $('#main-content').innerHTML = `<div class="error-state"><h3>Unable to load</h3><p>${html(error.message)}</p>${button('Try again', 'retry', '')}</div>`;
+  }
+}
+function pagination(page, offset, hasNext) {
+  return `<div class="pagination">${button('Previous', 'page', page, `data-offset="${Math.max(0, offset - PAGE_SIZE)}" ${offset === 0 ? 'disabled' : ''}`)}<small>Page ${Math.floor(offset / PAGE_SIZE) + 1}</small>${button('Next', 'page', page, `data-offset="${offset + PAGE_SIZE}" ${hasNext ? '' : 'disabled'}`)}</div>`;
 }
 function restaurantCard(restaurant) {
-  const id=Number(restaurant.restaurant_id), [symbol,tone]=art(restaurant),saved=state.favorites.has(id);
-  return `<article class="restaurant-card card"><div class="restaurant-art ${tone}"><span aria-hidden="true">${symbol}</span><button type="button" class="icon-button save-button ${saved?'is-saved':''}" data-action="favorite" data-id="${id}" aria-label="${saved?'Remove from':'Add to'} saved places">${saved?'♥':'♡'}</button></div><div class="restaurant-card-body"><div class="restaurant-meta"><span>${html(restaurant.cuisines?.slice(0,2).join(' · ') || restaurant.suburb || 'Local favourite')}</span><span>${html(restaurant.suburb || '')}</span></div><h3><button type="button" data-action="restaurant" data-id="${id}">${html(restaurant.restaurant_name)}</button></h3><div class="restaurant-address">${html(restaurant.street_address || 'Sydney, NSW')}</div><div class="restaurant-bottom"><span class="rating-star">★</span><strong class="rating">${ratingText(restaurant.avg_rating)}</strong><span>(${html(restaurant.review_count ?? 0)} reviews)</span><span class="price">${priceText(restaurant.price_level)}</span></div>${friendVisitLabel(restaurant)}</div></article>`;
-}
-function reviewRow(review) {return `<div class="review-row"><div class="review-top">${avatar(review.user_name,'green')}<div><strong>${html(review.user_name)}</strong><small>${dateText(review.created_at)} · ${visitDate(review.visit_date)}</small></div><span class="rating"><span class="rating-star">★</span> ${html(review.rating)}/5</span></div><p>${html(review.review_text)}</p></div>`;}
-function modal(title,content,wide=false) {$('#modal-root').innerHTML=`<div class="modal-backdrop" data-action="close-backdrop"><div class="modal ${wide?'wide':''}" role="dialog" aria-modal="true" aria-label="${html(title)}"><div class="modal-header"><div><span class="eyebrow">TABLEMATES</span><h2>${html(title)}</h2></div><button type="button" class="icon-button" data-action="close-modal" aria-label="Close">×</button></div>${content}</div></div>`;document.body.style.overflow='hidden';$('.modal .icon-button')?.focus();}
-function closeModal() {$('#modal-root').innerHTML='';document.body.style.overflow='';}
-function showAuth() {$('#auth-screen').hidden=false;$('#app-shell').hidden=true;closeModal();}
-async function enterApp(user) {state.user=user;$('#auth-screen').hidden=true;$('#app-shell').hidden=false;$('#sidebar-name').textContent=user.user_name;$('#sidebar-avatar').textContent=initials(user.user_name);await refreshFavorites();await navigate('home');}
-async function refreshFavorites() {const result=await api('/api/favorites');state.favorites=new Set(result.items.map(item=>Number(item.restaurant_id)));}
-async function refreshBadges() {try {const {counts}=await api('/api/dashboard');const friends=$('#nav-friend-count');friends.textContent=counts.incoming_requests;friends.hidden=!Number(counts.incoming_requests);$('#nav-inbox-dot').hidden=!Number(counts.unread_recommendations);}catch {}}
-const pageLabels={home:'Home',explore:'Explore places',friends:'Friends',feed:'Activity',plans:'Dining plans',saved:'Saved places',inbox:'Inbox',profile:'Profile'};
-async function navigate(page) {
-  if (!pageLabels[page]) page='home';state.page=page;const sequence=++state.sequence;
-  document.querySelectorAll('.nav-item').forEach(item=>item.classList.toggle('active',item.dataset.page===page));
-  $('#topbar-title').textContent=pageLabels[page];$('#topbar-section').textContent=page==='home'?'YOUR SPACE':'TABLEMATES';$('#sidebar').classList.remove('open');
-  $('#main-content').innerHTML='<div class="loading-state">Setting the table…</div>';
-  try {const content=await ({home:homePage,explore:explorePage,friends:friendsPage,feed:feedPage,plans:plansPage,saved:savedPage,inbox:inboxPage,profile:profilePage}[page])();if(sequence===state.sequence){$('#main-content').innerHTML=content;window.scrollTo(0,0);}refreshBadges();}
-  catch(error){if(sequence===state.sequence)$('#main-content').innerHTML=`<div class="error-state"><h3>We couldn't load this page</h3><p>${html(error.message)}</p><button class="button button-outline" data-action="retry">Try again</button></div>`;}
-}
-async function homePage() {
-  const [dashboard,friends,feed,places,friendPlaces,plans]=await Promise.all([api('/api/dashboard'),api('/api/friends'),api('/api/feed?limit=3'),api('/api/restaurants?limit=3'),api('/api/restaurants?friends_only=1&sort=friends&limit=3'),api('/api/plans')]);
-  const incoming=friends.items.filter(friend=>friend.status==='pending' && friend.direction==='received').slice(0,2);
-  const latest=plans.items.slice(0,2);const c=dashboard.counts;
-  return `<div class="hero"><div class="hero-content"><span class="eyebrow light">WELCOME BACK, ${html(firstName(state.user.user_name).toUpperCase())}</span><h1>Find your next<br>good table.</h1><p>Recommendations you can trust, shared by people you know. Where shall we go next?</p><button class="button" data-page="explore">Explore places <span>→</span></button></div><div class="hero-art" aria-hidden="true">✦</div></div>
-    <div class="stats-grid">${[['✦',c.friend_count,'Friends'],['♡',c.favorite_count,'Saved places'],['★',c.review_count,'Your reviews'],['◷',c.incoming_requests,'Friend requests']].map(([icon,count,label])=>`<div class="card stat-card"><span class="stat-icon">${icon}</span><strong>${html(count)}</strong><small>${label}</small></div>`).join('')}</div>
-    ${section('Where friends have been','Restaurants visited by your friends in the last 90 days','<button class="text-button" data-action="friends-places">See all →</button>')}${friendPlaces.items.length?`<div class="restaurant-grid">${friendPlaces.items.map(restaurantCard).join('')}</div>`:empty('No recent friend visits','When friends share a visit, their favourite places will appear here.')}
-    ${section('Places worth a look','Highly rated by the community','<button class="text-button" data-page="explore">Explore all →</button>')}<div class="restaurant-grid">${places.items.map(restaurantCard).join('')}</div>
-    <div class="two-col"><section>${section('From your friends','Recent reviews and new finds','<button class="text-button" data-page="feed">Activity →</button>')}${feed.items.length?`<div class="stack">${feed.items.map(item=>`<div class="card activity-card"><div class="activity-top">${avatar(item.user_name,'green')}<div><strong>${html(item.user_name)}</strong><small>${dateText(item.created_at)}</small></div><span class="pill">★ ${html(item.rating)}</span></div><p>${html(item.review_text).slice(0,170)}${String(item.review_text).length>170?'…':''} <button class="text-button activity-place" data-action="restaurant" data-id="${item.restaurant_id}">${html(item.restaurant_name)}</button></p></div>`).join('')}</div>`:empty('It is quiet here','Your friends’ reviews will appear here.')}</section>
-    <section>${section('Around your table','Requests and plans')}${incoming.length?`<div class="card card-padding"><span class="eyebrow">NEW FRIEND REQUESTS</span>${incoming.map(item=>`<div class="quick-row">${avatar(item.other_user_name,'pink')}<div><strong>${html(item.other_user_name)}</strong><small>Wants to connect</small></div><div class="row-actions"><button class="button button-primary button-small" data-action="friend-decision" data-id="${item.friendship_id}" data-decision="accept">Accept</button><button class="button button-light button-small" data-action="friend-decision" data-id="${item.friendship_id}" data-decision="reject">Decline</button></div></div>`).join('')}</div>`:empty('All caught up','No new friend requests right now.')}${latest.length?`${section('Your dinner plans','','<button class="text-button" data-page="plans">All plans →</button>')}<div class="stack">${latest.map(item=>`<div class="card mini-plan"><span class="pill warm">${html(item.status)}</span><h3>${html(item.title)}</h3><p>${dateText(item.plan_date)} · ${html(item.creator_name)}</p><button class="button button-outline button-small" data-action="plan-detail" data-id="${item.plan_id}">View plan →</button></div>`).join('')}</div>`:''}</section></div>`;
+  const id = Number(restaurant.restaurant_id), saved = state.favorites.has(id);
+  const names = (restaurant.friend_names || []).slice(0, 3).map(html).join(', ');
+  return `<article class="restaurant-card card"><div class="restaurant-art"><span aria-hidden="true">🍽️</span><button class="icon-button save-button ${saved ? 'is-saved' : ''}" type="button" data-action="favorite" data-id="${id}" aria-label="${saved ? 'Unsave' : 'Save'} restaurant">${saved ? '♥' : '♡'}</button></div><div class="restaurant-card-body"><div class="restaurant-meta">${html(restaurant.cuisines?.join(' · ') || restaurant.suburb)}</div><h3><button type="button" data-action="restaurant" data-id="${id}">${html(restaurant.restaurant_name)}</button></h3><div class="restaurant-address">${html(restaurant.street_address)} · ${html(restaurant.suburb)}</div><div class="restaurant-bottom"><span class="rating-star">★</span><strong>${ratingText(restaurant.avg_rating)}</strong><span>(${html(restaurant.review_count)} reviews)</span><span class="price">${'$'.repeat(restaurant.price_level)}</span></div>${restaurant.friend_visit_count > 0 ? `<div class="friend-visit-note"><strong>${restaurant.friend_visit_count} friend(s) visited in the last 90 days</strong><small>${names}${restaurant.friend_visit_count > 3 ? ' and more' : ''}</small></div>` : ''}</div></article>`;
 }
 async function explorePage() {
-  const [catalog,places]=await Promise.all([state.catalog?Promise.resolve(state.catalog):api('/api/catalog'),api('/api/restaurants?'+params({...state.filters,limit:50}))]);state.catalog=catalog;
-  const {q,suburb,cuisine,sort,friends_only}=state.filters;
-  return `${heading('DISCOVER','Find a place to love','Browse neighbourhood gems and trusted recommendations.')}
-    <form id="filter-form" class="filter-bar card"><div class="filter-row"><input name="q" value="${html(q)}" placeholder="Search restaurants..." aria-label="Search restaurants"><select name="suburb" aria-label="Filter by suburb"><option value="">All suburbs</option>${catalog.suburbs.map(item=>`<option value="${html(item.name)}" ${suburb===item.name?'selected':''}>${html(item.name)}</option>`).join('')}</select><select name="cuisine" aria-label="Filter by cuisine"><option value="">All cuisines</option>${catalog.cuisines.map(item=>`<option value="${html(item.cuisine_name)}" ${cuisine===item.cuisine_name?'selected':''}>${html(item.cuisine_name)}</option>`).join('')}</select><select name="sort" aria-label="Sort restaurants">${[['rating','Top rated'],['reviews','Most reviewed'],['friends','Friends visited recently'],['name','Name A–Z'],['price','Price: low to high']].map(([value,label])=>`<option value="${value}" ${sort===value?'selected':''}>${label}</option>`).join('')}</select><button class="button button-dark" type="submit">Find places</button></div></form>
-    <div class="friends-filter-strip"><span>✦ See where people you know have eaten</span><button type="button" class="button button-small ${friends_only==='1'?'button-primary':'button-outline'}" data-action="toggle-friends-filter" aria-pressed="${friends_only==='1'}">${friends_only==='1'?'✓ Visited by friends':'Visited by friends'}</button></div>
-    ${section(friends_only==='1'?`${places.items.length} places visited by friends`:`${places.items.length} places to explore`,'Open a restaurant to see its menu and reviews')}${places.items.length?`<div class="restaurant-grid">${places.items.map(restaurantCard).join('')}</div>`:empty('No matching places','Try another search or remove a filter.','<button class="button button-outline" data-action="clear-filters">Clear filters</button>')}`;
+  const filters = state.filters, offset = state.offsets.explore;
+  const {items} = await api('/api/restaurants?' + params({...filters, limit: PAGE_SIZE + 1, offset}));
+  const options = (list, key, selected) => list.map(item => `<option value="${html(item[key])}" ${item[key] === selected ? 'selected' : ''}>${html(item[key])}</option>`).join('');
+  return heading('Find your next good table.', 'Explore restaurants and discover where your friends have been.') +
+    `<form id="filter-form" class="filter-bar card">
+      <div class="form-field search-field"><label for="filter-q">Restaurant name</label><input id="filter-q" name="q" value="${html(filters.q)}" maxlength="100" placeholder="Search restaurants"></div>
+      <div class="form-field"><label for="filter-suburb">Suburb</label><select id="filter-suburb" name="suburb"><option value="">All suburbs</option>${options(state.catalog.suburbs, 'name', filters.suburb)}</select></div>
+      <div class="form-field"><label for="filter-cuisine">Cuisine</label><select id="filter-cuisine" name="cuisine"><option value="">All cuisines</option>${options(state.catalog.cuisines, 'cuisine_name', filters.cuisine)}</select></div>
+      <div class="form-field"><label for="filter-price">Price level</label><select id="filter-price" name="price_level"><option value="">Any price</option>${[1,2,3,4].map(n => `<option value="${n}" ${String(n) === filters.price_level ? 'selected' : ''}>${'$'.repeat(n)}</option>`).join('')}</select></div>
+      <div class="form-field"><label for="filter-rating">Minimum rating</label><select id="filter-rating" name="min_rating"><option value="">Any rating</option>${[3,4,4.5].map(n => `<option value="${n}" ${String(n) === filters.min_rating ? 'selected' : ''}>${n}+</option>`).join('')}</select></div>
+      <div class="form-field"><label for="filter-sort">Sort by</label><select id="filter-sort" name="sort">${[['rating','Highest rating'],['reviews','Most reviews'],['name','Name'],['price','Price'],['friends','Recent friend visits']].map(([value,label]) => `<option value="${value}" ${value === filters.sort ? 'selected' : ''}>${label}</option>`).join('')}</select></div>
+      <div class="filter-actions"><button class="button button-primary" type="submit">Apply filters</button>${button('Reset', 'clear-filters', '')}</div>
+    </form>
+    <div class="friends-filter-strip"><span>${filters.friends_only === '1' ? 'Showing restaurants recently visited by your friends' : 'Discover restaurants through your friends'}</span>${button(filters.friends_only === '1' ? 'Show all restaurants' : 'Friends visited only', 'toggle-friends-filter', '')}</div>
+    ${items.length ? `<div class="restaurant-grid">${items.slice(0, PAGE_SIZE).map(restaurantCard).join('')}</div>` : empty('No matching restaurants', 'Try changing your filters or connect with more friends.')}
+    ${pagination('explore', offset, items.length > PAGE_SIZE)}`;
 }
-function personRow(person,actions='',subtitle='') {return `<div class="person-row">${avatar(person.other_user_name || person.user_name,'green')}<div class="person-info"><strong>${html(person.other_user_name || person.user_name)}</strong><p>${html(subtitle)}</p></div><div class="row-actions">${actions}</div></div>`;}
+function personRow(name, description, actions) {
+  return `<div class="person-row">${avatar(name)}<div class="person-info"><strong>${html(name)}</strong><p>${html(description)}</p></div><div class="row-actions">${actions}</div></div>`;
+}
 async function friendsPage() {
-  const [connections,users]=await Promise.all([api('/api/friends'),api('/api/users?'+params({q:state.friendQuery}))]);
-  const accepted=connections.items.filter(item=>item.status==='accepted'),incoming=connections.items.filter(item=>item.status==='pending' && item.direction==='received'),outgoing=connections.items.filter(item=>item.status==='pending' && item.direction==='sent');
-  const suggestions=users.items.filter(item=>!item.friendship_status).slice(0,12);
-  return `${heading('YOUR PEOPLE','Friends at the table','Connect with people whose taste you trust.','<button class="button button-outline" data-action="friends-places">Places friends visited →</button>')}
-    <div class="two-col equal"><div><section class="list-section">${section(`Friends (${accepted.length})`)}<div class="card card-padding stack">${accepted.length?accepted.map(item=>personRow(item,`<button class="button button-outline button-small" data-action="share" data-friend="${item.other_user_id}">Recommend a place</button>`,'Connected')).join(''):empty('No friends yet','Search for someone to connect with.')}</div></section>
-    <section class="list-section">${section(`Incoming requests (${incoming.length})`)}<div class="card card-padding stack">${incoming.length?incoming.map(item=>personRow(item,`<button class="button button-primary button-small" data-action="friend-decision" data-id="${item.friendship_id}" data-decision="accept">Accept</button><button class="button button-light button-small" data-action="friend-decision" data-id="${item.friendship_id}" data-decision="reject">Decline</button>`,'Wants to connect')).join(''):empty('No new requests','You are all caught up.')}</div></section></div>
-    <div><section class="list-section">${section('Find people')}<form id="friend-search-form" class="search-form"><input name="q" value="${html(state.friendQuery)}" placeholder="Search by name" aria-label="Search people"><button class="button button-dark" type="submit">Search</button></form><div class="card card-padding stack">${suggestions.length?suggestions.map(item=>personRow(item,`<button class="button button-outline button-small" data-action="send-request" data-id="${item.user_id}">Add friend</button>`,'Suggested for you')).join(''):empty('No new people found','Try a different name.')}</div></section>
-    ${outgoing.length?`<section class="list-section">${section(`Sent requests (${outgoing.length})`)}<div class="card card-padding stack">${outgoing.map(item=>personRow(item,status('pending'),'Waiting for a reply')).join('')}</div></section>`:''}</div></div>`;
+  const [{items}, people] = await Promise.all([api('/api/friends'), api('/api/users?' + params({q: state.friendQuery}))]);
+  const incoming = items.filter(item => item.status === 'pending' && item.direction === 'received');
+  const accepted = items.filter(item => item.status === 'accepted');
+  const other = items.filter(item => item.status !== 'accepted' && !incoming.includes(item));
+  return heading('Your friends.', 'Connect with people whose restaurant opinions you trust.') +
+    `<div class="two-col"><section>${section('Incoming requests')}${incoming.length ? `<div class="stack">${incoming.map(item => personRow(item.other_user_name, 'Wants to connect', button('Accept','friend-decision',item.friendship_id,'data-decision="accept"','button-primary') + button('Decline','friend-decision',item.friendship_id,'data-decision="reject"'))).join('')}</div>` : empty('No pending requests','New requests will appear here.')}
+    ${section(`Friends (${accepted.length})`)}<div class="stack">${accepted.map(item => personRow(item.other_user_name,'Connected','')).join('') || empty('No friends yet','Search for someone below.')}</div>
+    ${section('Other requests')}<div class="stack">${other.map(item => personRow(item.other_user_name, item.direction + ' · ' + item.status,'')).join('') || '<p class="muted">No other requests.</p>'}</div></section>
+    <section>${section('Find people')}<form id="friend-search-form" class="search-form"><input aria-label="Search people" name="q" value="${html(state.friendQuery)}" placeholder="Search by name" maxlength="100"><button type="submit" class="button button-dark">Search</button></form><div class="stack">${people.items.map(item => personRow(item.user_name,item.friendship_status || 'Not connected',item.friendship_status ? `<span class="status-pill ${html(item.friendship_status)}">${html(item.friendship_status)}</span>` : button('Add friend','send-request',item.user_id))).join('') || empty('No matches','Try another name.')}</div></section></div>`;
 }
-async function feedPage() {const {items}=await api('/api/feed?limit=50');return `${heading('FRIENDS’ ACTIVITY','The good word','A look at where your friends have been eating.')}
-  <div class="feed-grid"><div>${items.length?items.map(item=>`<article class="card feed-card"><div class="feed-head">${avatar(item.user_name,'green')}<div><strong>${html(item.user_name)}</strong><small>${dateText(item.created_at)} · Visited ${visitDate(item.visit_date)}</small></div><span class="pill warm">★ ${html(item.rating)}/5</span></div><h3>${html(item.restaurant_name)}</h3><p>${html(item.review_text)}</p><div class="feed-footer"><button class="text-button" data-action="restaurant" data-id="${item.restaurant_id}">See restaurant →</button><button class="button button-light button-small" data-action="comments" data-id="${item.review_id}">Comments →</button></div></article>`).join(''):empty('Your feed is waiting','Connect with friends to see their restaurant reviews.','<button class="button button-dark" data-page="friends">Find friends</button>')}</div><aside class="card feed-aside"><span class="eyebrow">GOOD TO KNOW</span><h3>Every review tells a story.</h3><p>Tablemates shows reviews from friends when they are shared publicly or with friends. Comment to keep the conversation going.</p><button class="button button-outline button-small" data-action="new-review">Write your own review</button></aside></div>`;}
-async function savedPage() {const {items}=await api('/api/favorites');return `${heading('YOUR SHORTLIST','Saved places','The restaurants you want to remember.','<button class="button button-dark" data-page="explore">Explore more →</button>')}${items.length?`<div class="restaurant-grid">${items.map(restaurantCard).join('')}</div>`:empty('Nothing saved yet','Tap the heart on any restaurant to keep it here.','<button class="button button-dark" data-page="explore">Explore places</button>')}`;}
-async function inboxPage() {const {items}=await api('/api/recommendations');const incoming=items.filter(item=>Number(item.receiver_id)===Number(state.user.user_id)),outgoing=items.filter(item=>Number(item.sender_id)===Number(state.user.user_id));return `${heading('PERSONAL PICKS','Your inbox','Recommendations sent between friends.','<button class="button button-primary" data-action="share">+ Recommend a place</button>')}
-  <div class="two-col equal"><section>${section(`For you (${incoming.length})`)}<div class="stack">${incoming.length?incoming.map(item=>`<div class="inbox-row"><div class="grow"><span class="eyebrow">FROM ${html(item.sender_name).toUpperCase()}</span><h3 style="margin:7px 0 4px">${html(item.restaurant_name)}</h3><p>${html(item.message)}</p><small class="muted">${dateText(item.created_at)}</small> ${status(item.status)}</div><div class="row-actions"><button class="button button-outline button-small" data-action="restaurant" data-id="${item.restaurant_id}">View</button>${item.status==='unread'?`<button class="button button-light button-small" data-action="recommendation-status" data-id="${item.recommendation_id}" data-status="read">Mark read</button>`:''}<button class="button button-light button-small" data-action="recommendation-status" data-id="${item.recommendation_id}" data-status="dismissed">Dismiss</button></div></div>`).join(''):empty('No recommendations yet','Ask a friend for their next great find.')}</div></section>
-  <section>${section(`Sent by you (${outgoing.length})`)}<div class="stack">${outgoing.length?outgoing.map(item=>`<div class="inbox-row"><div class="grow"><span class="eyebrow">TO ${html(item.receiver_name).toUpperCase()}</span><h3 style="margin:7px 0 4px">${html(item.restaurant_name)}</h3><p>${html(item.message)}</p><small class="muted">${dateText(item.created_at)}</small> ${status(item.status)}</div></div>`).join(''):empty('Spread the word','Share a restaurant with one of your friends.')}</div></section></div>`;}
-async function plansPage() {const {items}=await api('/api/plans');return `${heading('MAKE IT HAPPEN','Dining plans','A place, a date, and the people you want there.','<button class="button button-primary" data-action="new-plan">+ Plan a meal</button>')}<div class="utility-banner">Create a plan, invite friends, offer two or more restaurants, then let everyone vote. The organiser can finalise the winning choice.</div>${items.length?`<div class="stack">${items.map(item=>`<div class="plan-row"><div class="grow"><span class="eyebrow">${dateText(item.plan_date)}</span><h3 style="margin:7px 0 4px"><button class="link-like" data-action="plan-detail" data-id="${item.plan_id}">${html(item.title)}</button></h3><p>Organised by ${html(item.creator_name)}${item.chosen_restaurant_name?` · ${html(item.chosen_restaurant_name)}`:''}</p></div>${status(item.status)} ${status(item.my_rsvp)}<button class="button button-outline button-small" data-action="plan-detail" data-id="${item.plan_id}">View plan →</button></div>`).join('')}</div>`:empty('No plans yet','Start one and give your group a reason to get together.','<button class="button button-dark" data-action="new-plan">Plan a meal</button>')}`;}
-async function profilePage() {const [{user},{items:visits},{counts}]=await Promise.all([api('/api/me'),api('/api/me/visits'),api('/api/dashboard')]);return `${heading('YOUR ACCOUNT','Your food journal','A little history of where you have been.')}
-  <div class="card profile-card">${avatar(user.user_name,'pink')}<div><h2>${html(user.user_name)}</h2><p>${html(user.user_email)} · Joined ${dateText(user.created_at)}</p></div><button class="button button-outline button-small" data-action="logout">Sign out</button></div><div class="stats-grid">${[['✦',counts.friend_count,'Friends'],['♡',counts.favorite_count,'Saved places'],['★',counts.review_count,'Reviews'],['◷',counts.visit_count,'Visits']].map(([icon,count,label])=>`<div class="card stat-card"><span class="stat-icon">${icon}</span><strong>${html(count)}</strong><small>${label}</small></div>`).join('')}</div>
-  ${section('Your visits','Reviews are linked to a visit, not to individual dishes')}${visits.length?`<div class="stack">${visits.map(item=>`<div class="visit-row"><div class="grow"><strong>${html(item.restaurant_name)}</strong><p>${visitDate(item.visit_date)} · Party of ${html(item.party_size)} · ${html(item.visibility)}${item.rating?` · ★ ${html(item.rating)}/5`:''}</p>${item.review_text?`<p style="color:#4f6859">${html(item.review_text)}</p>`:''}</div>${item.review_id?'':`<button class="button button-outline button-small" data-action="review-visit" data-id="${item.visit_id}" data-name="${html(item.restaurant_name)}">Add review</button>`}</div>`).join('')}</div>`:empty('No visits yet','Write your first restaurant review to start your journal.','<button class="button button-dark" data-action="new-review">Write a review</button>')}`;}
-
-async function restaurantDetail(id,scope=state.reviewScopes[id] || 'all',restoreScroll=0) {
-  modal('Restaurant','<div class="loading-state">Opening the menu…</div>',true);
-  const [{restaurant,menu},{items:reviews},{items:friendVisits,friend_count:friendCount,recent_days:recentDays}]=await Promise.all([
+async function savedPage() {
+  const {items} = await api('/api/favorites');
+  return heading('Saved places.', 'Your shortlist for another day.') +
+    (items.length ? `<div class="restaurant-grid">${items.map(restaurantCard).join('')}</div>` : empty('Nothing saved yet','Save a restaurant using its heart button.'));
+}
+async function recordsPage() {
+  const offset = state.offsets.records;
+  const {items} = await api('/api/me/visits?' + params({limit: PAGE_SIZE + 1, offset}));
+  return heading('My visits & reviews.', 'Record a visit, add a review, or update your own experience.') +
+    `<div class="stack">${items.slice(0,PAGE_SIZE).map(item => `<article class="visit-row"><h3><button class="link-like" type="button" data-action="restaurant" data-id="${item.restaurant_id}">${html(item.restaurant_name)}</button></h3><small>Visited ${html(item.visit_date)} · Party of ${item.party_size}${item.review_id ? ` · ★ ${item.rating}/5` : ' · Not reviewed yet'}</small>${item.review_id ? `<p>${html(item.review_text)}</p><div class="row-actions">${button('Edit review','edit-review',item.review_id)}${button('Delete review','delete-review',item.review_id,'','button-danger')}${button('Comments','comments',item.review_id)}</div>` : `<div class="row-actions">${button('Add review','review-visit',item.visit_id)}</div>`}</article>`).join('') || empty('No visits yet','Record your first visit using the button above.')}</div>${pagination('records',offset,items.length > PAGE_SIZE)}`;
+}
+function reviewRow(review, conversation = false) {
+  const owner = state.user && Number(review.user_id) === Number(state.user.user_id);
+  return `<article class="review-row"><div class="review-top">${avatar(review.user_name)}<div><strong>${html(review.user_name)}</strong><small>Visited ${html(review.visit_date)}</small></div><span class="rating">★ ${review.rating}/5</span></div><p>${html(review.review_text)}</p><div class="row-actions">${conversation ? '' : button('Comments','comments',review.review_id)}${owner ? button('Edit','edit-review',review.review_id) + button('Delete','delete-review',review.review_id,'','button-danger') : ''}</div></article>`;
+}
+async function restaurantDetail(id, scope = 'all', offset = 0) {
+  state.detail = {id, scope, offset};
+  const [detail, reviews, friends] = await Promise.all([
     api(`/api/restaurants/${id}`),
-    api(`/api/restaurants/${id}/reviews?limit=20&friends_only=${scope==='friends'?'1':'0'}`),
-    api(`/api/restaurants/${id}/friend-visits`),
+    api(`/api/restaurants/${id}/reviews?` + params({friends_only: scope === 'friends' ? '1' : '0', limit: PAGE_SIZE + 1, offset})),
+    api(`/api/restaurants/${id}/friend-visits`)
   ]);
-  const [symbol,tone]=art(restaurant),saved=state.favorites.has(Number(id));
-  modal(restaurant.restaurant_name,`<div class="restaurant-detail-top"><div class="restaurant-art detail-art ${tone}" aria-hidden="true">${symbol}</div><div><span class="eyebrow">${html(restaurant.cuisines?.join(' · ') || 'LOCAL FAVOURITE')}</span><h2>${html(restaurant.restaurant_name)}</h2><p>${html(restaurant.street_address || '')} · ${html(restaurant.suburb || '')}</p><span class="rating-star">★</span> <strong class="rating">${ratingText(restaurant.avg_rating)}</strong> <span class="muted">(${html(restaurant.review_count)} reviews) · ${priceText(restaurant.price_level)}</span></div></div>
-    <div class="detail-controls"><button class="button button-primary button-small" data-action="write-review" data-id="${id}">+ Write a review</button><button class="button button-outline button-small" data-action="favorite" data-id="${id}">${saved?'♥ Saved':'♡ Save place'}</button><button class="button button-outline button-small" data-action="share" data-restaurant="${id}">Recommend to a friend</button></div>
-    <div class="friend-detail-panel"><div class="friend-detail-heading"><span class="friend-note-icon">✦</span><div><strong>${friendCount} friend${friendCount===1?' has':'s have'} visited recently</strong><small>Shared visits from the last ${recentDays} days</small></div></div>${friendVisits.length?`<div class="friend-visit-list">${friendVisits.map(item=>`<div class="friend-visit-person">${avatar(item.user_name,'green')}<span><strong>${html(item.user_name)}</strong><small>Visited ${visitDate(item.visit_date)}${item.rating?` · Rated ${html(item.rating)}/5`:''}</small></span></div>`).join('')}</div>`:'<p>No friends have shared a recent visit to this restaurant.</p>'}</div>
-    ${section('On the menu','Dishes are shown for context; reviews are for the restaurant as a whole')}<div class="menu-list">${menu.length?menu.map(item=>`<div class="menu-row"><div><strong>${html(item.dish_name)}</strong><p>${html(item.description || '')}${item.is_available?'':' · Currently unavailable'}</p></div><span class="price">$${Number(item.price_aud).toFixed(2)}</span></div>`).join(''):empty('No menu yet','Check back later for dishes.')}</div>
-    ${section('What people say',scope==='friends'?'Reviews shared by your accepted friends':'Reviews you can view')}<div class="review-tabs" role="group" aria-label="Review filter"><button type="button" class="${scope==='all'?'active':''}" data-action="review-scope" data-id="${id}" data-scope="all" aria-pressed="${scope==='all'}">All reviews</button><button type="button" class="${scope==='friends'?'active':''}" data-action="review-scope" data-id="${id}" data-scope="friends" aria-pressed="${scope==='friends'}">Friends only</button></div><div class="review-list">${reviews.length?reviews.map(reviewRow).join(''):empty(scope==='friends'?'No friend reviews yet':'No reviews yet',scope==='friends'?'Your friends have not shared a review for this place.':'Be the first to share a restaurant review.')}</div>`,true);
-  if (restoreScroll) $('.modal').scrollTop=restoreScroll;
+  const r = detail.restaurant;
+  modal(r.restaurant_name, `<p class="muted">${html(r.street_address)} · ${html(r.suburb)} · ${html(r.cuisines.join(' · '))}</p><p>★ <strong>${ratingText(r.avg_rating)}</strong> · ${r.review_count} reviews · ${'$'.repeat(r.price_level)}</p><div class="detail-controls">${button('Record a visit','write-review',id,'','button-primary')}${button(state.favorites.has(Number(id)) ? '♥ Saved' : '♡ Save place','favorite',id)}</div>
+    <div class="friend-detail-panel"><strong>${friends.friend_count} friend(s) visited in the last 90 days</strong><div class="friend-visit-list">${friends.items.map(item => `<div class="friend-visit-person">${html(item.user_name)}<small>${html(item.visit_date)}</small></div>`).join('') || 'No recent friend visits.'}</div></div>
+    ${section('Restaurant reviews')}<div class="review-tabs">${['all','friends'].map(value => `<button type="button" class="${scope === value ? 'active' : ''}" data-action="review-scope" data-id="${id}" data-scope="${value}">${value === 'all' ? 'All reviews' : 'Friends only'}</button>`).join('')}</div>
+    <div class="review-list">${reviews.items.slice(0,PAGE_SIZE).map(item => reviewRow(item)).join('') || empty('No reviews here yet','Try all reviews or share your own experience.')}</div>
+    <div class="pagination">${button('Previous','review-page',id,`data-offset="${Math.max(0,offset-PAGE_SIZE)}" ${offset === 0 ? 'disabled' : ''}`)}<small>Page ${Math.floor(offset/PAGE_SIZE)+1}</small>${button('Next','review-page',id,`data-offset="${offset+PAGE_SIZE}" ${reviews.items.length > PAGE_SIZE ? '' : 'disabled'}`)}</div>`, true);
 }
-async function commentsModal(id) {const [{review},{items}]=await Promise.all([api(`/api/reviews/${id}`),api(`/api/reviews/${id}/comments`)]);modal('Review conversation',`<div class="review-list">${reviewRow(review)}</div>${section(`Comments (${items.length})`)}<div class="stack">${items.length?items.map(item=>`<div class="review-row"><div class="review-top">${avatar(item.author_name,'lilac')}<div><strong>${html(item.author_name)}</strong><small>${dateText(item.created_at)}</small></div></div><p>${html(item.comment_text)}</p></div>`).join(''):empty('Start the conversation','No comments on this review yet.')}</div><form id="comment-form" data-id="${id}" class="form-stack" style="margin-top:20px"><label for="comment-text">Your comment</label><textarea id="comment-text" name="comment_text" required maxlength="1000" rows="3" placeholder="What do you think?"></textarea><div class="form-actions"><button class="button button-primary" type="submit">Post comment</button></div></form>`,true);}
-async function reviewModal(restaurantId=null,visitId=null,restaurantName='') {
-  let selector='';
-  if (!restaurantId && !visitId) {const {items}=await api('/api/restaurants?limit=50&sort=name');selector=`<div class="form-field full"><label for="review-restaurant">Restaurant</label><select id="review-restaurant" name="restaurant_id" required><option value="">Choose a restaurant</option>${items.map(item=>`<option value="${item.restaurant_id}">${html(item.restaurant_name)}</option>`).join('')}</select></div>`;}
-  const label=visitId?`Review your visit to ${restaurantName}`:restaurantId?'Share your visit':'Write a review';
-  modal(label,`<div class="utility-banner">Tell friends about the restaurant overall. Dishes are listed on the menu, but do not have separate reviews.</div><form id="review-form" data-restaurant="${restaurantId||''}" data-visit="${visitId||''}" class="form-grid">${selector}${restaurantId?`<div class="form-field full"><label>Restaurant</label><input value="${html(restaurantName || 'Selected restaurant')}" disabled></div>`:''}${visitId?`<div class="form-field full"><label>Visit</label><input value="${html(restaurantName)}" disabled></div>`:''}<div class="form-field"><label for="review-rating">Overall rating</label><select id="review-rating" name="rating" required><option value="">Choose a rating</option>${[5,4,3,2,1].map(n=>`<option value="${n}">${'★'.repeat(n)} · ${n}/5</option>`).join('')}</select></div>${visitId?'':`<div class="form-field"><label for="review-date">Visit date</label><input id="review-date" name="visit_date" type="date" required max="${localDate()}" value="${localDate()}"></div><div class="form-field"><label for="review-party">Party size</label><input id="review-party" name="party_size" type="number" min="1" max="30" value="2" required></div><div class="form-field"><label for="review-visibility">Who can see it?</label><select id="review-visibility" name="visibility"><option value="friends">Friends</option><option value="public">Everyone</option><option value="private">Only me</option></select></div>`}<div class="form-field full"><label for="review-text">Your review</label><textarea id="review-text" name="review_text" maxlength="5000" required placeholder="What was the atmosphere like? What would you tell a friend?"></textarea></div><div class="form-field full"><div class="form-actions"><button type="button" class="button button-outline" data-action="close-modal">Cancel</button><button class="button button-primary" type="submit">Publish review</button></div></div></form>`);
+async function commentsModal(id) {
+  const [{review},{items}] = await Promise.all([api(`/api/reviews/${id}`),api(`/api/reviews/${id}/comments`)]);
+  const byId = new Map(items.map(item => [Number(item.comment_id),item]));
+  modal('Review conversation', `${reviewRow(review,true)}${section(`Comments (${items.length})`)}<div class="stack">${items.map(item => `<div class="comment-row ${item.parent_comment_id ? 'reply-row' : ''}"><strong>${html(item.author_name)}</strong><small>${dateText(item.created_at)}</small>${item.parent_comment_id ? `<div class="reply-note">Reply to ${html(byId.get(Number(item.parent_comment_id))?.author_name || 'another comment')}</div>` : ''}<p>${html(item.comment_text)}</p><div class="row-actions">${button('Reply','reply-comment',item.comment_id,`data-author="${html(item.author_name)}"`)}</div></div>`).join('') || empty('Start a conversation','No comments yet.')}</div>
+    <form id="comment-form" data-id="${id}" class="form-stack"><p id="reply-context" class="muted" hidden></p><input type="hidden" name="parent_comment_id" value=""><label for="comment-text">Your comment</label><textarea id="comment-text" name="comment_text" required maxlength="1000"></textarea><div class="form-actions">${button('Clear reply','clear-reply','')}<button class="button button-primary" type="submit">Post comment</button></div></form>`, true);
 }
-async function shareModal(friendId='',restaurantId='') {
-  const [connections,places]=await Promise.all([api('/api/friends'),api('/api/restaurants?limit=50&sort=name')]);const friends=connections.items.filter(item=>item.status==='accepted');
-  if (!friends.length){toast('Connect with a friend before recommending a place.',true);return;}
-  modal('Recommend a place',`<p class="muted">Send a personal tip to a friend.</p><form id="share-form" class="form-grid"><div class="form-field full"><label for="share-friend">Friend</label><select id="share-friend" name="receiver_id" required><option value="">Choose a friend</option>${friends.map(item=>`<option value="${item.other_user_id}" ${String(friendId)===String(item.other_user_id)?'selected':''}>${html(item.other_user_name)}</option>`).join('')}</select></div><div class="form-field full"><label for="share-restaurant">Restaurant</label><select id="share-restaurant" name="restaurant_id" required><option value="">Choose a restaurant</option>${places.items.map(item=>`<option value="${item.restaurant_id}" ${String(restaurantId)===String(item.restaurant_id)?'selected':''}>${html(item.restaurant_name)}</option>`).join('')}</select></div><div class="form-field full"><label for="share-message">Why this place?</label><textarea id="share-message" name="message" maxlength="1000" required placeholder="I think you'd love their relaxed atmosphere..."></textarea></div><div class="form-field full"><div class="form-actions"><button type="button" class="button button-outline" data-action="close-modal">Cancel</button><button class="button button-primary" type="submit">Send recommendation</button></div></div></form>`);
+async function reviewModal({restaurantId = '', visitId = '', reviewId = ''} = {}) {
+  const editing = reviewId ? (await api(`/api/reviews/${reviewId}`)).review : null;
+  const places = !restaurantId && !visitId && !editing ? (await api('/api/restaurants?limit=50&sort=name')).items : [];
+  const required = visitId || editing;
+  modal(editing ? 'Edit your review' : visitId ? 'Review your visit' : 'Record a restaurant visit',
+    `<form id="review-form" data-restaurant="${restaurantId}" data-visit="${visitId}" data-review="${reviewId}" class="form-grid">
+    ${places.length ? `<div class="form-field full"><label for="review-restaurant">Restaurant</label><select id="review-restaurant" name="restaurant_id" required><option value="">Choose a restaurant</option>${places.map(item => `<option value="${item.restaurant_id}">${html(item.restaurant_name)}</option>`).join('')}</select></div>` : ''}
+    ${!required ? `<div class="form-field"><label for="review-date">Visit date</label><input id="review-date" name="visit_date" type="date" max="${localDate()}" value="${localDate()}" required></div><div class="form-field"><label for="review-party">Party size</label><input id="review-party" name="party_size" type="number" min="1" max="30" value="2" required></div>` : ''}
+    <div class="form-field full"><label for="review-rating">Overall restaurant rating</label><select id="review-rating" name="rating" ${required ? 'required' : ''}>${!required ? '<option value="">Record visit without a review</option>' : ''}${[5,4,3,2,1].map(n => `<option value="${n}" ${n === (editing?.rating || 5) ? 'selected' : ''}>${n}/5</option>`).join('')}</select></div>
+    <div class="form-field full"><label for="review-text">Your review</label><textarea id="review-text" name="review_text" maxlength="5000" ${required ? 'required' : ''} placeholder="Review the restaurant overall; leave blank if recording a visit without a review.">${html(editing?.review_text || '')}</textarea></div>
+    <div class="form-actions full">${button('Cancel','close-modal','')}<button class="button button-primary" type="submit">${editing ? 'Save changes' : 'Save visit & review'}</button></div></form>`);
 }
-async function newPlanModal() {
-  const [connections,places]=await Promise.all([api('/api/friends'),api('/api/restaurants?limit=50&sort=name')]);const friends=connections.items.filter(item=>item.status==='accepted');
-  const options=places.items.map(item=>`<option value="${item.restaurant_id}">${html(item.restaurant_name)}</option>`).join('');
-  const tomorrow=new Date(Date.now()+86400000),meal=new Date(Date.now()+7*86400000);const localInput=date=>new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);
-  modal('Plan a meal',`<p class="muted">Set a date, invite friends and give your group two restaurants to choose from.</p><form id="plan-form" class="form-grid"><div class="form-field full"><label for="plan-title">Plan title</label><input id="plan-title" name="title" maxlength="120" required placeholder="Friday dinner with friends"></div><div class="form-field"><label for="plan-date">Meal date and time</label><input id="plan-date" type="datetime-local" name="plan_date" value="${localInput(meal)}" required></div><div class="form-field"><label for="plan-deadline">Voting deadline</label><input id="plan-deadline" type="datetime-local" name="voting_deadline" value="${localInput(tomorrow)}" required></div><div class="form-field"><label for="candidate-one">Restaurant option 1</label><select id="candidate-one" name="candidate_one" required><option value="">Choose a place</option>${options}</select></div><div class="form-field"><label for="candidate-two">Restaurant option 2</label><select id="candidate-two" name="candidate_two" required><option value="">Choose a different place</option>${options}</select></div><div class="form-field full"><label>Invite friends (optional)</label><div class="check-list">${friends.length?friends.map(item=>`<label class="check-option"><input type="checkbox" name="invitee" value="${item.other_user_id}">${html(item.other_user_name)}</label>`).join(''):'Add friends first to invite them.'}</div></div><div class="form-field full"><div class="form-actions"><button type="button" class="button button-outline" data-action="close-modal">Cancel</button><button class="button button-primary" type="submit">Create plan</button></div></div></form>`);
-}
-async function planDetail(id) {
-  modal('Dining plan','<div class="loading-state">Opening your plan…</div>',true);
-  const {plan,participants,candidates,votes}=await api(`/api/plans/${id}`);const mine=participants.find(item=>Number(item.user_id)===Number(state.user.user_id));const myVote=votes.find(item=>Number(item.user_id)===Number(state.user.user_id));const owner=Number(plan.creator_id)===Number(state.user.user_id);
-  modal(plan.title,`<div class="utility-banner"><strong>${dateText(plan.plan_date)}</strong> · Vote by ${dateText(plan.voting_deadline)} · ${status(plan.status)}${plan.chosen_restaurant_name?`<br>Chosen place: <strong>${html(plan.chosen_restaurant_name)}</strong>`:''}</div><div class="detail-controls">${mine?.rsvp_status==='invited'?`<button class="button button-primary button-small" data-action="plan-rsvp" data-id="${id}" data-rsvp="accepted">Join plan</button><button class="button button-outline button-small" data-action="plan-rsvp" data-id="${id}" data-rsvp="declined">Decline</button>`:''}${owner&&plan.status==='draft'?`<button class="button button-primary button-small" data-action="plan-command" data-id="${id}" data-command="open">Open voting</button>`:''}${owner&&plan.status==='open'?`<button class="button button-primary button-small" data-action="plan-command" data-id="${id}" data-command="finalize">Finalise winner</button>`:''}${owner&&['open','draft'].includes(plan.status)?`<button class="button button-danger button-small" data-action="plan-command" data-id="${id}" data-command="cancel">Cancel plan</button>`:''}</div>${section('Restaurant choices','One vote per person; you can change it before voting closes')}<div class="stack">${candidates.map(item=>`<div class="choice-row"><div><strong>${html(item.restaurant_name)}</strong><small>★ ${ratingText(item.avg_rating)} · ${html(item.review_count)} reviews</small></div><span class="voter-count">${html(item.vote_count)} vote${Number(item.vote_count)===1?'':'s'}</span>${myVote?.restaurant_id===item.restaurant_id?'<span class="pill dark">Your vote</span>':plan.status==='open'&&mine?.rsvp_status==='accepted'?`<button class="button button-outline button-small" data-action="plan-vote" data-id="${id}" data-restaurant="${item.restaurant_id}">Vote</button>`:''}</div>`).join('')}</div>${section(`People (${participants.length})`)}<div class="stack">${participants.map(item=>personRow(item,status(item.rsvp_status),'')).join('')}</div>`,true);
-}
-
-async function performAction(element) {
-  const action=element.dataset.action,id=element.dataset.id;
-  if (action==='close-modal'){closeModal();return;}
-  if (action==='toggle-menu'){$('#sidebar').classList.toggle('open');return;}
-  if (action==='retry'){await navigate(state.page);return;}
-  if (action==='clear-filters'){state.filters={q:'',suburb:'',cuisine:'',sort:'rating',friends_only:'0'};await navigate('explore');return;}
-  if (action==='friends-places'){state.filters={q:'',suburb:'',cuisine:'',sort:'friends',friends_only:'1'};await navigate('explore');return;}
-  if (action==='toggle-friends-filter'){state.filters.friends_only=state.filters.friends_only==='1'?'0':'1';if(state.filters.friends_only==='1')state.filters.sort='friends';else if(state.filters.sort==='friends')state.filters.sort='rating';await navigate('explore');return;}
-  if (action==='demo-login'){const result=await api('/api/login',{method:'POST',data:{email:'alice.morgan@example.test',password:'DemoPass2026!'}});await enterApp(result.user);toast('Welcome to the demo!');return;}
-  if (action==='logout'){await api('/api/logout',{method:'POST'});state.user=null;showAuth();toast('You have signed out.');return;}
-  if (action==='restaurant'){await restaurantDetail(id);return;}
-  if (action==='review-scope'){const scroll=$('.modal')?.scrollTop || 0;state.reviewScopes[id]=element.dataset.scope;await restaurantDetail(id,element.dataset.scope,scroll);return;}
-  if (action==='favorite'){if(state.favorites.has(Number(id))){await api(`/api/favorites/${id}`,{method:'DELETE'});state.favorites.delete(Number(id));toast('Removed from saved places.');}else{await api('/api/favorites',{method:'POST',data:{restaurant_id:Number(id)}});state.favorites.add(Number(id));toast('Saved for later.');}if($('#modal-root').innerHTML)await restaurantDetail(id);else await navigate(state.page);return;}
-  if (action==='friend-decision'){await api(`/api/friend-requests/${id}/${element.dataset.decision}`,{method:'POST'});toast(element.dataset.decision==='accept'?'You are now friends!':'Request declined.');await navigate(state.page);return;}
-  if (action==='send-request'){await api('/api/friend-requests',{method:'POST',data:{addressee_id:Number(id)}});toast('Friend request sent.');await navigate('friends');return;}
-  if (action==='comments'){await commentsModal(id);return;}
-  if (action==='new-review'){await reviewModal();return;}
-  if (action==='write-review'){const name=$('.restaurant-detail-top h2')?.textContent || '';await reviewModal(id,null,name);return;}
-  if (action==='review-visit'){await reviewModal(null,id,element.dataset.name);return;}
-  if (action==='share'){await shareModal(element.dataset.friend,element.dataset.restaurant);return;}
-  if (action==='recommendation-status'){await api(`/api/recommendations/${id}`,{method:'PATCH',data:{status:element.dataset.status}});toast('Recommendation updated.');await navigate('inbox');return;}
-  if (action==='new-plan'){await newPlanModal();return;}
-  if (action==='plan-detail'){await planDetail(id);return;}
-  if (action==='plan-rsvp'){await api(`/api/plans/${id}/rsvp`,{method:'POST',data:{rsvp_status:element.dataset.rsvp}});toast('RSVP updated.');await planDetail(id);await refreshBadges();return;}
-  if (action==='plan-vote'){await api(`/api/plans/${id}/vote`,{method:'POST',data:{restaurant_id:Number(element.dataset.restaurant)}});toast('Your vote is in.');await planDetail(id);return;}
-  if (action==='plan-command'){const command=element.dataset.command;if(command==='cancel'&&!window.confirm('Cancel this dining plan?'))return;await api(`/api/plans/${id}/${command}`,{method:'POST'});toast(command==='finalize'?'Restaurant chosen!':command==='open'?'Voting is open.':'Plan cancelled.');await planDetail(id);return;}
+async function performAction(item) {
+  const action = item.dataset.action, id = item.dataset.id;
+  if (action === 'auth-mode') {authMode(item.dataset.mode); return;}
+  if (action === 'close-modal') {closeModal(); return;}
+  if (action === 'toggle-menu') {$('#sidebar').classList.toggle('open'); return;}
+  if (action === 'retry') {await navigate(state.page); return;}
+  if (action === 'page') {state.offsets[id] = Number(item.dataset.offset); await navigate(id); return;}
+  if (action === 'clear-filters') {state.filters = {q:'',suburb:'',cuisine:'',price_level:'',min_rating:'',sort:'rating',friends_only:'0'}; state.offsets.explore = 0; await navigate('explore'); return;}
+  if (action === 'toggle-friends-filter') {state.filters.friends_only = state.filters.friends_only === '1' ? '0' : '1'; state.offsets.explore = 0; await navigate('explore'); return;}
+  if (action === 'demo-login') {const {user} = await api('/api/login',{method:'POST',data:{email:'alice.morgan@example.test',password:'DemoPass2026!'}}); await enterApp(user); return;}
+  if (action === 'logout') {await api('/api/logout',{method:'POST'}); state.user = null; showAuth(); return;}
+  if (action === 'restaurant') {await restaurantDetail(id); return;}
+  if (action === 'review-scope') {await restaurantDetail(id,item.dataset.scope); return;}
+  if (action === 'review-page') {await restaurantDetail(id,state.detail.scope,Number(item.dataset.offset)); return;}
+  if (action === 'favorite') {
+    const saved = state.favorites.has(Number(id));
+    await api(saved ? `/api/favorites/${id}` : '/api/favorites',{method:saved ? 'DELETE' : 'POST',data:saved ? undefined : {restaurant_id:Number(id)}});
+    saved ? state.favorites.delete(Number(id)) : state.favorites.add(Number(id));
+    toast(saved ? 'Removed from saved places.' : 'Restaurant saved.');
+    if ($('#modal-root').innerHTML) await restaurantDetail(id,state.detail?.scope || 'all',state.detail?.offset || 0);
+    else await navigate(state.page);
+    return;
+  }
+  if (action === 'friend-decision') {await api(`/api/friend-requests/${id}/${item.dataset.decision}`,{method:'POST'}); toast('Friend request updated.'); await navigate('friends'); return;}
+  if (action === 'send-request') {await api('/api/friend-requests',{method:'POST',data:{addressee_id:Number(id)}}); toast('Friend request sent.'); await navigate('friends'); return;}
+  if (action === 'comments') {await commentsModal(id); return;}
+  if (action === 'reply-comment') {
+    const form = $('#comment-form');
+    form.elements.parent_comment_id.value = id;
+    $('#reply-context').textContent = 'Replying to ' + item.dataset.author;
+    $('#reply-context').hidden = false;
+    $('#comment-text').focus(); return;
+  }
+  if (action === 'clear-reply') {$('#comment-form').elements.parent_comment_id.value = ''; $('#reply-context').hidden = true; return;}
+  if (action === 'new-review') {await reviewModal(); return;}
+  if (action === 'write-review') {await reviewModal({restaurantId:id}); return;}
+  if (action === 'review-visit') {await reviewModal({visitId:id}); return;}
+  if (action === 'edit-review') {await reviewModal({reviewId:id}); return;}
+  if (action === 'delete-review') {
+    if (!window.confirm('Delete this review and its comments? Your visit record will remain.')) return;
+    await api(`/api/reviews/${id}`,{method:'DELETE'});
+    closeModal(); toast('Review deleted; visit retained.'); await navigate(state.page); return;
+  }
 }
 async function submitForm(form) {
-  const data=new FormData(form);
-  if (form.id==='login-form'){const result=await api('/api/login',{method:'POST',data:{email:String(data.get('email')).trim(),password:String(data.get('password'))}});await enterApp(result.user);return;}
-  if (form.id==='filter-form'){state.filters={...Object.fromEntries(['q','suburb','cuisine','sort'].map(key=>[key,String(data.get(key)||'')])),friends_only:state.filters.friends_only};await navigate('explore');return;}
-  if (form.id==='friend-search-form'){state.friendQuery=String(data.get('q')||'').trim();await navigate('friends');return;}
-  if (form.id==='comment-form'){await api(`/api/reviews/${form.dataset.id}/comments`,{method:'POST',data:{comment_text:String(data.get('comment_text')).trim()}});toast('Comment posted.');await commentsModal(form.dataset.id);return;}
-  if (form.id==='review-form'){const payload={rating:Number(data.get('rating')),review_text:String(data.get('review_text')).trim()};if(form.dataset.visit){await api(`/api/visits/${form.dataset.visit}/review`,{method:'POST',data:payload});}else{payload.restaurant_id=Number(form.dataset.restaurant || data.get('restaurant_id'));payload.visit_date=String(data.get('visit_date'));payload.party_size=Number(data.get('party_size'));payload.visibility=String(data.get('visibility'));await api('/api/visits',{method:'POST',data:payload});}closeModal();toast('Review published.');await navigate(state.page);return;}
-  if (form.id==='share-form'){await api('/api/recommendations',{method:'POST',data:{receiver_id:Number(data.get('receiver_id')),restaurant_id:Number(data.get('restaurant_id')),message:String(data.get('message')).trim()}});closeModal();toast('Recommendation sent.');await navigate('inbox');return;}
-  if (form.id==='plan-form'){const candidateIds=[Number(data.get('candidate_one')),Number(data.get('candidate_two'))];if(candidateIds[0]===candidateIds[1])throw new Error('Choose two different restaurants.');const planDate=new Date(String(data.get('plan_date'))),deadline=new Date(String(data.get('voting_deadline')));if(!(Date.now()<deadline.getTime()&&deadline<planDate))throw new Error('The voting deadline must be in the future and before the meal.');await api('/api/plans',{method:'POST',data:{title:String(data.get('title')).trim(),plan_date:planDate.toISOString(),voting_deadline:deadline.toISOString(),candidate_restaurant_ids:candidateIds,invitee_ids:data.getAll('invitee').map(Number)}});closeModal();toast('Dinner plan created.');await navigate('plans');return;}
+  const data = new FormData(form);
+  if (form.id === 'login-form' || form.id === 'register-form') {
+    const registering = form.id === 'register-form';
+    if (registering && data.get('password') !== data.get('confirm_password')) throw new Error('Passwords do not match.');
+    const payload = {email:String(data.get('email')).trim(),password:String(data.get('password'))};
+    if (registering) payload.user_name = String(data.get('user_name')).trim();
+    const {user} = await api(registering ? '/api/register' : '/api/login',{method:'POST',data:payload});
+    form.reset(); await enterApp(user); return;
+  }
+  if (form.id === 'filter-form') {
+    state.filters = {...state.filters,...Object.fromEntries(['q','suburb','cuisine','price_level','min_rating','sort'].map(key => [key,String(data.get(key) || '')]))};
+    state.offsets.explore = 0; await navigate('explore'); return;
+  }
+  if (form.id === 'friend-search-form') {state.friendQuery = String(data.get('q') || '').trim(); await navigate('friends'); return;}
+  if (form.id === 'comment-form') {
+    const parent = data.get('parent_comment_id');
+    await api(`/api/reviews/${form.dataset.id}/comments`,{method:'POST',data:{comment_text:String(data.get('comment_text')).trim(),parent_comment_id:parent ? Number(parent) : null}});
+    toast('Comment posted.'); await commentsModal(form.dataset.id); return;
+  }
+  if (form.id === 'review-form') {
+    const rating = Number(data.get('rating'));
+    const payload = rating ? {rating,review_text:String(data.get('review_text')).trim()} : {};
+    if (form.dataset.review) await api(`/api/reviews/${form.dataset.review}`,{method:'PATCH',data:payload});
+    else if (form.dataset.visit) await api(`/api/visits/${form.dataset.visit}/review`,{method:'POST',data:payload});
+    else await api('/api/visits',{method:'POST',data:{...payload,restaurant_id:Number(form.dataset.restaurant || data.get('restaurant_id')),visit_date:String(data.get('visit_date')),party_size:Number(data.get('party_size'))}});
+    closeModal(); toast('Saved successfully.'); await navigate(state.page); return;
+  }
 }
-document.addEventListener('click',async event=>{
-  const element=event.target.closest('[data-action],[data-page]');if(!element)return;
-  if(element.dataset.action==='close-backdrop'&&event.target!==element)return;
+document.addEventListener('click',async event => {
+  const item = event.target.closest('[data-action],[data-page]');
+  if (!item) return;
+  if (item.dataset.action === 'close-backdrop' && event.target !== item) return;
   event.preventDefault();
-  if(element.dataset.action==='close-backdrop'){closeModal();return;}
-  if(element.dataset.page){closeModal();await navigate(element.dataset.page);return;}
-  element.disabled=true;try{await performAction(element);}catch(error){errorNotice(error);}finally{if(element.isConnected)element.disabled=false;}
+  if (item.dataset.action === 'close-backdrop') {closeModal(); return;}
+  item.disabled = true;
+  try {
+    if (item.dataset.page) {closeModal(); await navigate(item.dataset.page);}
+    else await performAction(item);
+  } catch (error) {toast(error.message,true);}
+  finally {if (item.isConnected) item.disabled = false;}
 });
-document.addEventListener('submit',async event=>{const form=event.target;if(!(form instanceof HTMLFormElement))return;event.preventDefault();const button=form.querySelector('[type="submit"]');if(button)button.disabled=true;try{await submitForm(form);}catch(error){errorNotice(error);}finally{if(button?.isConnected)button.disabled=false;}});
-document.addEventListener('keydown',event=>{if(event.key==='Escape')closeModal();});
-(async()=>{try{const {user}=await api('/api/me');await enterApp(user);}catch{showAuth();}})();
+document.addEventListener('submit',async event => {
+  const form = event.target;
+  if (!(form instanceof HTMLFormElement)) return;
+  event.preventDefault();
+  const submit = form.querySelector('[type="submit"]');
+  if (submit) submit.disabled = true;
+  try {await submitForm(form);} catch (error) {toast(error.message,true);}
+  finally {if (submit?.isConnected) submit.disabled = false;}
+});
+document.addEventListener('keydown', event => {if (event.key === 'Escape') closeModal();});
+(async () => {try {const {user} = await api('/api/me'); await enterApp(user);} catch (error) {showAuth(); if (error.status !== 401) toast(error.message,true);}})();

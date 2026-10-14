@@ -1,4 +1,4 @@
-"""Start the backend; the frontend can use the JSON endpoints under /api."""
+"""Start the Tablemates website and its PostgreSQL-backed JSON API."""
 
 import os
 

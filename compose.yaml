@@ -15,9 +15,9 @@ services:
       timeout: 5s
       retries: 10
     volumes:
-      - friend_review_pgdata:/var/lib/postgresql/data
+      - friend_review_pgdata_v2:/var/lib/postgresql/data
       - ./sql/init:/docker-entrypoint-initdb.d:ro
-      - ./sql:/project-sql:ro
 
 volumes:
-  friend_review_pgdata:
+  friend_review_pgdata_v2:
+    name: friend-review-db_friend_review_pgdata_v2

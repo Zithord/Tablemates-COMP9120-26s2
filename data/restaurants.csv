@@ -1,0 +1,51 @@
+restaurant_id,restaurant_name,street_address,suburb_id,price_level,is_active
+1,Lantern Noodles,12 King Street,1,2,true
+2,Sakura Table,14 Crown Street,2,3,true
+3,Corner Coffee,17 Dixon Street,3,1,true
+4,Pasta Garden,20 King Street,1,2,true
+5,Red Lantern Kitchen,23 Church Street,4,2,true
+6,Silk Road Dumplings,26 Victoria Avenue,5,2,true
+7,Jade Bowl,29 Regent Street,7,1,true
+8,Golden Wok House,32 Burwood Road,8,2,true
+9,Kumo Bento,35 Victoria Avenue,5,2,true
+10,Mizu Ramen,38 Dixon Street,3,2,true
+11,Hana Izakaya,41 Crown Street,2,3,true
+12,Yuzu Kitchen,44 Church Street,4,3,true
+13,Wattle and Bean,47 Glebe Point Road,6,2,true
+14,Field Notes Cafe,50 Regent Street,7,2,true
+15,Sunroom Coffee,53 Bondi Road,10,2,true
+16,Juniper Table,56 King Street,1,3,true
+17,Trattoria Lume,59 Crown Street,2,3,true
+18,Olive and Flour,62 Glebe Point Road,6,2,true
+19,Casa Sera,65 Church Street,4,3,true
+20,Rosso Kitchen,68 Bondi Road,10,3,true
+21,Seoul Garden Table,71 Dixon Street,3,2,true
+22,Kimchi House,74 Burwood Road,8,2,true
+23,Han River Grill,77 Victoria Avenue,5,3,true
+24,Bap and Bowl,80 Botany Road,9,1,true
+25,Lemongrass Lane,83 King Street,1,2,true
+26,Nara Thai Kitchen,86 Church Street,4,2,true
+27,Basil and Lime,89 Regent Street,7,2,true
+28,Siam Street Table,92 Bondi Road,10,3,true
+29,Pho and Co,95 Dixon Street,3,1,true
+30,Lotus Lane,98 Burwood Road,8,2,true
+31,Saigon Bowl,101 Botany Road,9,2,true
+32,Little Hanoi,104 Glebe Point Road,6,2,true
+33,Cardamom House,107 Church Street,4,3,true
+34,Tamarind Table,110 Victoria Avenue,5,2,true
+35,Saffron and Spice,113 Crown Street,2,3,true
+36,Masala Corner,116 Regent Street,7,2,true
+37,Cedar and Sumac,119 Glebe Point Road,6,3,true
+38,Pomegranate Kitchen,122 Crown Street,2,3,true
+39,Olive Grove Mezze,125 Church Street,4,2,true
+40,Za'atar Room,128 Bondi Road,10,2,true
+41,La Palma Cantina,131 King Street,1,2,true
+42,Casa Verde Tacos,134 Regent Street,7,2,true
+43,Salsa Roja,137 Botany Road,9,2,true
+44,Little Mercado,140 Burwood Road,8,1,true
+45,Banksia Dining,143 Crown Street,2,4,true
+46,The Local Harvest,146 Glebe Point Road,6,3,true
+47,Paperbark Kitchen,149 Victoria Avenue,5,4,true
+48,Harbour and Hearth,152 Bondi Road,10,3,true
+49,Coastal Catch,155 Bondi Road,10,3,true
+50,Saltwater Kitchen,158 Crown Street,2,4,true
