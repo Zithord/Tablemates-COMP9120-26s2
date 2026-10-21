@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Manrope:wght@300;400;500;600&display=swap");
 :root{font-family:Segoe UI,Arial,sans-serif;color:#203b35;background:#f7f6f2}
 *{box-sizing:border-box}body{margin:0;min-width:320px}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}[hidden]{display:none!important}a{color:inherit;text-decoration:none}h1,h2,h3,p{margin-top:0}h1,h2,h3{letter-spacing:-.04em}h1{font-size:clamp(2rem,4vw,3rem)}h2{font-size:1.5rem}h3{font-size:1.1rem}small,.muted{color:#6c7c72}.eyebrow{font-size:.7rem;letter-spacing:.16em;font-weight:700;color:#b46649}.light{color:#edc8b0}
 .button{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:9px;padding:12px 16px;font-size:.86rem;font-weight:700;white-space:nowrap}.button-primary{background:#d66d4b;color:white}.button-dark{background:#193f36;color:white}.button-outline{background:white;border:1px solid #ccd8ce;color:#244638}.button-light{background:#edf2eb;color:#285347}.button-danger{background:#fff0ed;color:#a63d29}.button-small{padding:8px 11px;font-size:.78rem}.text-button{border:0;background:none;color:#a95134;font-weight:700;padding:0}.text-button:hover{text-decoration:underline}.icon-button{width:36px;height:36px;border:0;border-radius:8px;background:#edf2eb;color:#284f40;font-size:1.1rem}
@@ -10,3 +11,121 @@
 @media(max-width:1100px){.restaurant-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sidebar{width:210px}.main-content{padding:28px}.topbar{padding:0 28px}.filter-bar{grid-template-columns:1fr 1fr}}
 @media(max-width:800px){.auth-screen{grid-template-columns:1fr}.auth-story{min-height:300px;padding:28px}.auth-story h1{font-size:2.8rem;margin:18px 0}.auth-story small{display:none}.auth-story .brand{margin-bottom:24px}.auth-panel{padding:35px 25px}.sidebar{position:fixed;transform:translateX(-105%);width:240px}.sidebar.open{transform:translateX(0)}.mobile-menu-button{display:block}.topbar strong{margin-right:auto;font-size:.85rem}.two-col{grid-template-columns:1fr}}
 @media(max-width:560px){.main-content{padding:24px 16px}.topbar{height:68px;padding:0 16px;gap:10px}.topbar .button{font-size:.75rem;padding:10px}.restaurant-grid,.form-grid{grid-template-columns:1fr}.filter-bar{grid-template-columns:1fr 1fr}.filter-bar .search-field{grid-column:1/-1}.full{grid-column:auto}.modal-backdrop{padding:8px}.modal{padding:20px;max-height:94vh}.friends-filter-strip{align-items:start;flex-direction:column}.person-row{flex-wrap:wrap}.person-row .row-actions{width:100%}.reply-row{margin-left:10px}}
+
+.restaurant-art{height:150px;overflow:hidden}.restaurant-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.save-button{z-index:1}.detail-photo{display:block;width:100%;height:200px;object-fit:cover;border-radius:12px;margin:0 0 14px}
+
+/* =====================================================================
+   Evening theme: dark, warm, photographic (inspired by moody fine-dining sites).
+   Appended override layer: delete this block to return to the original look.
+   ===================================================================== */
+:root{
+  --ink:#171614;--char:#22211f;--panel:#2a2926;--panel-2:#33312d;
+  --line:rgba(252,248,242,.12);--line-strong:rgba(252,248,242,.32);
+  --cream:#fcf8f2;--muted:#a7a097;--amber:#e3b26b;--amber-deep:#c9934a;--sage:#7f9a8c;--danger:#e0806b;
+  --display:"Jost","Avenir Next","Helvetica Neue",Arial,sans-serif;
+  --body:"Manrope","Helvetica Neue",Arial,sans-serif;
+  font-family:var(--body);color:var(--cream);background:var(--ink);
+}
+body{background:var(--ink);color:var(--cream);-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--display);font-weight:300;letter-spacing:-.01em;color:var(--cream)}
+h1{font-size:clamp(2.2rem,4.4vw,3.6rem);line-height:1.08}
+small,.muted{color:var(--muted)}
+.eyebrow{color:var(--amber);font-weight:500;letter-spacing:.28em;font-size:.66rem}
+.light{color:var(--amber)}
+::selection{background:var(--amber);color:var(--ink)}
+
+/* Buttons: hairline, square, quiet */
+.button{border-radius:0;font-weight:500;letter-spacing:.06em;font-size:.8rem;padding:12px 20px;transition:background .25s,color .25s,border-color .25s}
+.button-primary,.button-dark{background:transparent;color:var(--cream);border:1px solid var(--cream)}
+.button-primary:hover,.button-dark:hover{background:var(--cream);color:var(--ink)}
+.button-outline,.button-light{background:transparent;color:var(--cream);border:1px solid var(--line-strong)}
+.button-outline:hover,.button-light:hover{border-color:var(--cream)}
+.button-danger{background:transparent;color:var(--danger);border:1px solid rgba(224,128,107,.5)}
+.button-danger:hover{background:var(--danger);color:var(--ink)}
+.button-small{padding:8px 13px;font-size:.74rem}
+.text-button{color:var(--amber);font-weight:500;letter-spacing:.04em}
+.icon-button{border-radius:0;background:rgba(23,22,20,.55);color:var(--cream);border:1px solid var(--line-strong);backdrop-filter:blur(6px)}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:1px solid var(--amber);outline-offset:2px}
+
+/* Brand */
+.brand{font-family:var(--display);font-weight:400;letter-spacing:.02em;text-transform:lowercase}
+.brand span{color:var(--amber)}
+
+/* Sign-in screen: full-bleed evening photograph */
+.auth-screen{background:var(--ink)}
+.auth-story{background:linear-gradient(180deg,rgba(14,13,12,.35) 0%,rgba(14,13,12,.55) 55%,rgba(14,13,12,.9) 100%),url("https://images.unsplash.com/photo-1552960226-639240203497?w=1600&q=75&auto=format&fit=crop") center/cover,#1d1c1a}
+.auth-story h1{font-family:var(--display);font-weight:300;font-size:clamp(2.8rem,5vw,4.6rem);line-height:1.05}
+.auth-story em{color:var(--amber);font-style:normal}
+.auth-story p{color:rgba(252,248,242,.82);font-weight:300}
+.auth-story small{color:rgba(252,248,242,.6);letter-spacing:.22em}
+.auth-panel{background:var(--ink)}
+.auth-panel h2{font-size:2.3rem}
+.demo-access{border-top:1px solid var(--line)}
+.demo-access p{color:var(--muted)}
+
+/* Shell */
+.sidebar{background:#121110;color:var(--cream);border-right:1px solid var(--line)}
+.sidebar-caption{color:var(--muted);letter-spacing:.24em}
+.nav-item{border-radius:0;color:rgba(252,248,242,.68);font-weight:400;letter-spacing:.03em;font-size:.86rem;border-left:1px solid transparent;padding:12px 14px}
+.nav-item:hover{box-shadow:none;color:var(--cream);border-left-color:var(--line-strong)}
+.nav-item.active{background:transparent;color:var(--cream);border-left:1px solid var(--amber)}
+.sidebar-bottom small{color:var(--muted)}
+.topbar{background:rgba(23,22,20,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar strong{font-family:var(--display);font-weight:400;letter-spacing:.04em}
+.main-content{background:var(--ink)}
+
+/* Page heading becomes a photographic banner */
+.main-content>.page-heading,.page-heading{position:relative;padding:58px 40px 46px;margin-bottom:28px;background:linear-gradient(90deg,rgba(14,13,12,.92) 0%,rgba(14,13,12,.6) 60%,rgba(14,13,12,.35) 100%),url("https://images.unsplash.com/photo-1622021142947-da7dedc7c39a?w=1600&q=70&auto=format&fit=crop") center 40%/cover,#1d1c1a;border:1px solid var(--line)}
+.page-heading h1{margin:12px 0 10px}
+.page-heading p{color:rgba(252,248,242,.75);font-weight:300;font-size:.95rem}
+.modal .page-heading{background:none;border:0;padding:0}
+.section-head h2{font-family:var(--display);font-weight:300}
+
+/* Surfaces */
+.card,.review-row,.person-row,.visit-row,.comment-row,.loading-state,.empty-state,.error-state{background:var(--char);border:1px solid var(--line);border-radius:0}
+input,select,textarea{border-radius:0;background:var(--ink);border:1px solid var(--line-strong);color:var(--cream)}
+input::placeholder,textarea::placeholder{color:#7d776f}
+select option{background:var(--char);color:var(--cream)}
+label,.form-field label{color:var(--muted);letter-spacing:.06em;font-size:.74rem}
+.friends-filter-strip{background:transparent;border:1px solid var(--line);border-radius:0;color:rgba(252,248,242,.8)}
+.friend-detail-panel,.utility-banner{background:rgba(227,178,107,.07);border:1px solid rgba(227,178,107,.28);border-radius:0;color:var(--cream)}
+.friend-visit-person{background:var(--panel);border-radius:0;color:var(--cream)}
+
+/* Restaurant cards */
+.restaurant-card{overflow:hidden;transition:border-color .3s,transform .3s}
+.restaurant-card:hover{border-color:var(--line-strong);transform:translateY(-2px)}
+.restaurant-art{height:190px;background:linear-gradient(130deg,#2f2c27,#1d1c1a)}
+.restaurant-photo{filter:brightness(.86) saturate(.92);transition:transform .6s ease,filter .4s}
+.restaurant-card:hover .restaurant-photo{transform:scale(1.04);filter:brightness(.98) saturate(1)}
+.save-button{background:rgba(23,22,20,.55)}
+.save-button.is-saved{color:var(--amber);border-color:var(--amber)}
+.restaurant-card-body{padding:18px 18px 20px}
+.restaurant-meta{color:var(--amber);text-transform:uppercase;letter-spacing:.2em;font-size:.62rem}
+.restaurant-card h3 button,.link-like{color:var(--cream);font-family:var(--display);font-weight:400;font-size:1.3rem;letter-spacing:0}
+.restaurant-address{color:var(--muted)}
+.rating-star{color:var(--amber)}
+.price{color:var(--muted)}
+.friend-visit-note{color:var(--sage);border-top:1px solid var(--line)}
+.friend-visit-note small{color:var(--muted)}
+
+/* Reviews, tabs, people */
+.review-tabs{background:transparent;border-bottom:1px solid var(--line);border-radius:0;padding:0;gap:18px}
+.review-tabs button{border-radius:0;color:var(--muted);font-weight:400;padding:10px 0;border-bottom:1px solid transparent;margin-bottom:-1px}
+.review-tabs button.active{background:transparent;color:var(--cream);box-shadow:none;border-bottom-color:var(--amber)}
+.review-row p,.comment-row p{color:rgba(252,248,242,.86)}
+.avatar{background:transparent;color:var(--amber);border:1px solid rgba(227,178,107,.6)}
+.person-info p{color:var(--muted)}
+.status-pill{border-radius:0;background:transparent;border:1px solid var(--line-strong);color:var(--cream);font-weight:500}
+.status-pill.pending{background:transparent;color:var(--amber);border-color:rgba(227,178,107,.55)}
+.status-pill.rejected{background:transparent;color:var(--danger);border-color:rgba(224,128,107,.5)}
+.reply-note{color:var(--muted);border-left-color:var(--line-strong)}
+.reply-row{border-left-color:var(--line-strong)}
+.empty-state p,.error-state p{color:var(--muted)}
+
+/* Modal and toasts */
+.modal-backdrop{background:rgba(8,8,7,.78);backdrop-filter:blur(4px)}
+.modal{background:#1d1c1a;color:var(--cream);border:1px solid var(--line);border-radius:0;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.modal-header h2{font-family:var(--display);font-weight:300;font-size:1.9rem}
+.detail-photo{border-radius:0;height:240px;filter:brightness(.9)}
+.toast{background:var(--cream);color:var(--ink);border-radius:0}
+.toast.error{background:var(--danger);color:var(--ink)}
