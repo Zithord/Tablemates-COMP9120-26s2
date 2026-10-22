@@ -390,6 +390,8 @@ Then open a Pull Request from the branch to `main` on GitHub. The CSVs are commi
 This is a local course demo. The shared demo account can modify the demo data; when using a public tunnel, use only fictional content and close the tunnel after the demo.
 
 ## 10. Images, fonts and generative AI
+Generative AI tools were used in this project. it is used to generate synthetic demo data, designing the frontend web pages, and reviewing and debugging code. As well as generating feedback on the drafts of ER-diagrams, relational mapping, and assessing the report for improvements. All AI suggestions were checked against the lecture materials. 
+The group remains responsible for the correctness of the submitted database design, implementation, data, and report.
 
 - Restaurant photos come from Unsplash (Unsplash License). They are loaded by cuisine when viewed, are for presentation only, and are not stored in the database. Fonts are Jost and Manrope from Google Fonts. Both need an internet connection; offline, photos are hidden and fonts fall back, and all functionality still works.
 - Generative AI use:  .
