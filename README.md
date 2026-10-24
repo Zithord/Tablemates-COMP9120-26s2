@@ -1,8 +1,12 @@
 # Tablemates：A friends' Restaurant Review Database
 
-Tablemates is a project built around friendship. It helps users discover restaurants through their friends’ preferences, specifically the feedbacks of visits where friends have recently eaten, including how they rated each visit, and restaurant details such as suburb, cuisine and price level.
-Public review platforms aggregate the opinion of strangers, while friends' opinion stay scattered across chat histories. Tablemates stores friendships, visits and reviews as structured relational data. users register, manage friend requests, browse restaurants by suburb, cuisine, price, and ratings, record visists, write edit and delete reviews, save favorites, and discuss reviews in threaded comments.  
-The database runs on PostgreSQL and is demonstrated through a Flask web prototype. ALL users, restaurants, reviews and comments are fictional. 
+**COMP9120 Database Management Systems, Semester 2 2026 · Group 155**: Siqi Wu, Ruidong Xu, Wanyu Qing
+
+Tablemates helps users discover restaurants through their friends' experiences: where friends have eaten recently, how they rated each visit, and restaurant details such as suburb, cuisine and price level.
+
+Public review platforms aggregate the opinions of strangers, while friends' opinions stay scattered across chat histories. Tablemates stores friendships, visits and reviews as structured relational data. Users register, manage friend requests, browse restaurants by suburb, cuisine, price and rating, record visits, write, edit and delete reviews, save favourites, and discuss reviews in threaded comments.
+
+The database runs on PostgreSQL 17 and is demonstrated through a Flask web prototype. All users, restaurants, reviews and comments are fictional.
 
 ## 1. Environment and configuration
 
@@ -390,8 +394,7 @@ Then open a Pull Request from the branch to `main` on GitHub. The CSVs are commi
 This is a local course demo. The shared demo account can modify the demo data; when using a public tunnel, use only fictional content and close the tunnel after the demo.
 
 ## 10. Images, fonts and generative AI
-Generative AI tools were used in this project. it is used to generate synthetic demo data, designing the frontend web pages, and reviewing and debugging code. As well as generating feedback on the drafts of ER-diagrams, relational mapping, and assessing the report for improvements. All AI suggestions were checked against the lecture materials. 
-The group remains responsible for the correctness of the submitted database design, implementation, data, and report.
 
-- Restaurant photos come from Unsplash (Unsplash License). They are loaded by cuisine when viewed, are for presentation only, and are not stored in the database. Fonts are Jost and Manrope from Google Fonts. Both need an internet connection; offline, photos are hidden and fonts fall back, and all functionality still works.
-- Generative AI use:  .
+- **Images:** restaurant photos come from Unsplash (Unsplash License). They are loaded by cuisine when viewed, are for presentation only, and are not stored in the database.
+- **Fonts:** Jost and Manrope from Google Fonts. Photos and fonts need an internet connection; offline, photos are hidden and fonts fall back, and all functionality still works.
+- **Generative AI:** ChatGPT and Claude were used to generate synthetic demo data, design the frontend pages, review and debug code, and give feedback on drafts of the ER diagram, the relational mapping and the report. 
