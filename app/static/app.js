@@ -94,10 +94,31 @@ async function navigate(page) {
 function pagination(page, offset, hasNext) {
   return `<div class="pagination">${button('Previous', 'page', page, `data-offset="${Math.max(0, offset - PAGE_SIZE)}" ${offset === 0 ? 'disabled' : ''}`)}<small>Page ${Math.floor(offset / PAGE_SIZE) + 1}</small>${button('Next', 'page', page, `data-offset="${offset + PAGE_SIZE}" ${hasNext ? '' : 'disabled'}`)}</div>`;
 }
+// Cuisine photos from Unsplash (free to use under the Unsplash License). Presentation only: not stored in the database.
+const CUISINE_PHOTOS = {
+  'Cafe': ['1564327367919-cb377ea6a88f', '1760175445000-0e01e193d1cd', '1551266681-ba5f0b95e2e5'],
+  'Chinese': ['1563245372-f21724e3856d', '1496116218417-1a781b1c416c', '1534422298391-e4f8c172dddb'],
+  'Indian': ['1565557623262-b51c2513a641', '1631452180539-96aca7d48617', '1767114915989-c6ab3c8fc42e'],
+  'Italian': ['1498579150354-977475b7ea0b', '1784649667262-fd1bb54c384f', '1447279506476-3faec8071eee'],
+  'Japanese': ['1579871494447-9811cf80d66c', '1553621042-f6e147245754', '1569718212165-3a8278d5f624'],
+  'Korean': ['1498654896293-37aacf113fd9', '1774428755031-0991c8901f08', '1693429308125-3be7b105ad56'],
+  'Mexican': ['1599974579688-8dbdd335c77f', '1613514785940-daed07799d9b', '1771308354374-3d9ad8970483'],
+  'Middle Eastern': ['1542528180-0c79567c66de', '1787069789754-636ce94929e5'],
+  'Modern Australian': ['1616671276441-2f2c277b8bf9', '1616669944447-d65d41a222bd', '1703849133132-98c23595b981'],
+  'Seafood': ['1651323018466-b36b7df1d2b1', '1765100479761-2359e22fbe16', '1557267725-c530b236f446'],
+  'Thai': ['1655091273851-7bdc2e578a88', '1772729219154-2f5d5ddd732b', '1559314809-0d155014e29e'],
+  'Vietnamese': ['1631709497146-a239ef373cf1', '1582878826629-29b7ad1cdc43', '1766050586763-723571af4dde'],
+};
+function restaurantPhoto(restaurant, width = 640, height = 300) {
+  const ids = CUISINE_PHOTOS[(restaurant.cuisines || [])[0]];
+  if (!ids) return '';
+  const photoId = ids[Number(restaurant.restaurant_id) % ids.length];
+  return `https://images.unsplash.com/photo-${photoId}?w=${width}&h=${height}&fit=crop&auto=format&q=75`;
+}
 function restaurantCard(restaurant) {
   const id = Number(restaurant.restaurant_id), saved = state.favorites.has(id);
   const names = (restaurant.friend_names || []).slice(0, 3).map(html).join(', ');
-  return `<article class="restaurant-card card"><div class="restaurant-art"><span aria-hidden="true">🍽️</span><button class="icon-button save-button ${saved ? 'is-saved' : ''}" type="button" data-action="favorite" data-id="${id}" aria-label="${saved ? 'Unsave' : 'Save'} restaurant">${saved ? '♥' : '♡'}</button></div><div class="restaurant-card-body"><div class="restaurant-meta">${html(restaurant.cuisines?.join(' · ') || restaurant.suburb)}</div><h3><button type="button" data-action="restaurant" data-id="${id}">${html(restaurant.restaurant_name)}</button></h3><div class="restaurant-address">${html(restaurant.street_address)} · ${html(restaurant.suburb)}</div><div class="restaurant-bottom"><span class="rating-star">★</span><strong>${ratingText(restaurant.avg_rating)}</strong><span>(${html(restaurant.review_count)} reviews)</span><span class="price">${'$'.repeat(restaurant.price_level)}</span></div>${restaurant.friend_visit_count > 0 ? `<div class="friend-visit-note"><strong>${restaurant.friend_visit_count} friend(s) visited in the last 90 days</strong><small>${names}${restaurant.friend_visit_count > 3 ? ' and more' : ''}</small></div>` : ''}</div></article>`;
+  return `<article class="restaurant-card card"><div class="restaurant-art"><span aria-hidden="true">🍽️</span>${restaurantPhoto(restaurant) ? `<img class="restaurant-photo" src="${restaurantPhoto(restaurant)}" alt="" loading="lazy" onerror="this.remove()">` : ''}<button class="icon-button save-button ${saved ? 'is-saved' : ''}" type="button" data-action="favorite" data-id="${id}" aria-label="${saved ? 'Unsave' : 'Save'} restaurant">${saved ? '♥' : '♡'}</button></div><div class="restaurant-card-body"><div class="restaurant-meta">${html(restaurant.cuisines?.join(' · ') || restaurant.suburb)}</div><h3><button type="button" data-action="restaurant" data-id="${id}">${html(restaurant.restaurant_name)}</button></h3><div class="restaurant-address">${html(restaurant.street_address)} · ${html(restaurant.suburb)}</div><div class="restaurant-bottom"><span class="rating-star">★</span><strong>${ratingText(restaurant.avg_rating)}</strong><span>(${html(restaurant.review_count)} reviews)</span><span class="price">${'$'.repeat(restaurant.price_level)}</span></div>${restaurant.friend_visit_count > 0 ? `<div class="friend-visit-note"><strong>${restaurant.friend_visit_count} friend(s) visited in the last 90 days</strong><small>${names}${restaurant.friend_visit_count > 3 ? ' and more' : ''}</small></div>` : ''}</div></article>`;
 }
 async function explorePage() {
   const filters = state.filters, offset = state.offsets.explore;
@@ -154,7 +175,7 @@ async function restaurantDetail(id, scope = 'all', offset = 0) {
     api(`/api/restaurants/${id}/friend-visits`)
   ]);
   const r = detail.restaurant;
-  modal(r.restaurant_name, `<p class="muted">${html(r.street_address)} · ${html(r.suburb)} · ${html(r.cuisines.join(' · '))}</p><p>★ <strong>${ratingText(r.avg_rating)}</strong> · ${r.review_count} reviews · ${'$'.repeat(r.price_level)}</p><div class="detail-controls">${button('Record a visit','write-review',id,'','button-primary')}${button(state.favorites.has(Number(id)) ? '♥ Saved' : '♡ Save place','favorite',id)}</div>
+  modal(r.restaurant_name, `${restaurantPhoto(r, 960, 360) ? `<img class="detail-photo" src="${restaurantPhoto(r, 960, 360)}" alt="" onerror="this.remove()">` : ''}<p class="muted">${html(r.street_address)} · ${html(r.suburb)} · ${html(r.cuisines.join(' · '))}</p><p>★ <strong>${ratingText(r.avg_rating)}</strong> · ${r.review_count} reviews · ${'$'.repeat(r.price_level)}</p><div class="detail-controls">${button('Record a visit','write-review',id,'','button-primary')}${button(state.favorites.has(Number(id)) ? '♥ Saved' : '♡ Save place','favorite',id)}</div>
     <div class="friend-detail-panel"><strong>${friends.friend_count} friend(s) visited in the last 90 days</strong><div class="friend-visit-list">${friends.items.map(item => `<div class="friend-visit-person">${html(item.user_name)}<small>${html(item.visit_date)}</small></div>`).join('') || 'No recent friend visits.'}</div></div>
     ${section('Restaurant reviews')}<div class="review-tabs">${['all','friends'].map(value => `<button type="button" class="${scope === value ? 'active' : ''}" data-action="review-scope" data-id="${id}" data-scope="${value}">${value === 'all' ? 'All reviews' : 'Friends only'}</button>`).join('')}</div>
     <div class="review-list">${reviews.items.slice(0,PAGE_SIZE).map(item => reviewRow(item)).join('') || empty('No reviews here yet','Try all reviews or share your own experience.')}</div>
